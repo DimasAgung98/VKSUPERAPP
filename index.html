@@ -97,7 +97,7 @@
                 console.error("Init Error", err);
                 document.getElementById('connection-status').innerHTML = '<span class="text-rose-500">Offline (Check Config)</span>';
                 if(!firebaseConfig.apiKey.includes("ISI_API_KEY")) {
-                     showAlert("Koneksi Gagal", "Gagal menghubungkan ke Firebase: " + err.message, "error");
+                      showAlert("Koneksi Gagal", "Gagal menghubungkan ke Firebase: " + err.message, "error");
                 }
             }
         };
@@ -108,10 +108,12 @@
                     warehouseStock = snap.data();
                     renderWarehouseTable();
                     renderCraftingInputs();
+                    renderRecipeTable(); // PERBAIKAN: Render ulang kartu resep saat stok berubah
                 } else {
                     warehouseStock = {};
                     renderWarehouseTable();
                     renderCraftingInputs();
+                    renderRecipeTable(); // PERBAIKAN: Render ulang kartu resep saat stok kosong
                 }
             });
 
@@ -230,7 +232,7 @@
             currentConfirmCallback = null;
         };
 
-        // --- FUNGSI-FUNGSI LOGIKA ---
+        // --- FUNGSI-FUNGSI LOGIKA WAREHOUSE ---
         
         window.saveResource = async (e) => {
             e.preventDefault();
@@ -527,10 +529,7 @@
                     
                     try {
                         // 1. Get all warehouse logs
-                        // Menggunakan path yang konsisten dengan addLog
                         const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
-                        
-                        // Perbaikan: Ambil snapshot untuk filter secara manual atau pastikan data ada
                         const snapshot = await getDocs(q);
                         
                         // 2. Batch Delete with Pagination (Max 500 per batch)
@@ -539,7 +538,6 @@
                         
                         snapshot.docs.forEach((doc) => {
                             const data = doc.data();
-                            // Filter hanya tipe WAREHOUSE agar log crafting/pos aman (opsional, tergantung kebutuhan)
                             if (data.type === 'WAREHOUSE') {
                                 batch.delete(doc.ref);
                                 count++;
@@ -927,7 +925,8 @@
         window.saveRecipe = async (e) => {
             e.preventDefault();
             const name = document.getElementById('cr-name').value.trim().toUpperCase();
-            const sellPrice = parseFloat(document.getElementById('cr-price').value) || 0;
+            // const sellPrice = parseFloat(document.getElementById('cr-price').value) || 0; // Removed per request
+            const sellPrice = 0; // Default to 0 since input is removed
             const inputs = document.querySelectorAll('.recipe-input');
             const requirements = {};
             inputs.forEach(input => {
@@ -946,19 +945,86 @@
         };
 
         window.renderRecipeTable = () => {
-             const tbody = document.getElementById('cr-table-body');
-             tbody.innerHTML = Object.keys(recipes).map(name => {
+             const container = document.getElementById('cr-recipe-list');
+             if(!container) return;
+
+             const keys = Object.keys(recipes);
+             if (keys.length === 0) {
+                 container.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic border-2 border-dashed border-slate-700 rounded-lg">Belum ada resep.<br>Buat baru di form atas atau import Excel.</div>';
+                 return;
+             }
+
+             container.innerHTML = keys.map(name => {
                  const rec = recipes[name];
-                 const reqs = Object.entries(rec.requirements).map(([m,q]) => `${m}: <b>${q}</b>`).join(', ');
+                 
+                 // Format ingredients as a nice list with stock check
+                 const reqs = Object.entries(rec.requirements).map(([m,q]) => {
+                    const currentStock = warehouseStock[m] || 0;
+                    const isEnough = currentStock >= q;
+                    const stockColor = isEnough ? 'text-slate-400' : 'text-rose-500 font-bold';
+                    
+                    return `<div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-700/50 pb-1 mb-1 last:border-0 last:mb-0 last:pb-0">
+                        <span>${m}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] ${stockColor} mr-1" title="Butuh / Punya">${q} / ${currentStock}</span>
+                            <span class="font-mono text-emerald-400 font-bold bg-slate-900 px-1.5 rounded">${q}</span>
+                        </div>
+                    </div>`;
+                 }).join('');
+
                  return `
-                    <tr class="border-b border-slate-700 text-sm">
-                        <td class="p-3 font-bold text-blue-300">${name}</td>
-                        <td class="p-3 text-xs text-slate-400">${reqs}</td>
-                        <td class="p-3 text-right text-emerald-400">Rp ${rec.sellingPrice.toLocaleString()}</td>
-                        <td class="p-3 text-center"><button onclick="deleteRecipe('${name}')" class="text-rose-400"><i class="fas fa-trash"></i></button></td>
-                    </tr>
+                    <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
+                        <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
+                            <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
+                                <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
+                            </h4>
+                            <div class="flex gap-1">
+                                <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
+                                    <i class="fas fa-trash-alt text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/50 rounded p-2 border border-slate-800/50">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-[10px] uppercase font-bold text-slate-600">Komposisi Bahan:</p>
+                                <p class="text-[9px] text-slate-500 italic">(Butuh / Punya)</p>
+                            </div>
+                            <div class="space-y-1">
+                                ${reqs}
+                            </div>
+                        </div>
+                    </div>
                  `;
              }).join('');
+        };
+
+        // --- NEW FEATURE: EDIT RECIPE ---
+        window.editRecipe = (name) => {
+            const rec = recipes[name];
+            if (!rec) return;
+
+            // 1. Isi Nama Produk
+            const nameInput = document.getElementById('cr-name');
+            nameInput.value = name;
+            
+            // 2. Reset semua input bahan
+            document.querySelectorAll('.recipe-input').forEach(inp => inp.value = '');
+            
+            // 3. Isi input bahan sesuai resep
+            Object.entries(rec.requirements).forEach(([mat, qty]) => {
+                const input = document.querySelector(`.recipe-input[data-material="${mat}"]`);
+                if(input) input.value = qty;
+            });
+
+            // 4. Beri notifikasi & Scroll ke form
+            showAlert("Mode Edit", `Resep <b>${name}</b> telah dimuat di form sebelah kiri.<br>Silakan ubah komposisi lalu klik <b>SIMPAN RESEP</b> untuk memperbarui.`, "info");
+            
+            // Scroll ke bagian form (berguna di tampilan mobile)
+            document.getElementById('crafting').scrollIntoView({ behavior: 'smooth' });
+            nameInput.focus();
         };
 
         window.deleteRecipe = async (name) => {
@@ -966,6 +1032,73 @@
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name));
                 showAlert("Sukses", "Resep dihapus.", "success");
             }, "danger");
+        };
+        
+        // --- NEW FEATURE: IMPORT RECIPE FROM EXCEL ---
+        window.importRecipeExcel = async (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                    if (jsonData.length === 0) {
+                        showAlert("File Kosong", "File Excel tidak berisi data.", "warning");
+                        return;
+                    }
+
+                    // Structure: { "ProductName": { sellingPrice: 0, requirements: { "Mat": Qty } } }
+                    const recipeMap = {};
+                    let successCount = 0;
+
+                    jsonData.forEach(row => {
+                        // Flexible key matching
+                        const prodName = (row['Nama Produk'] || row['Product'] || row['Name'])?.toString().trim().toUpperCase();
+                        // Harga Jual diabaikan/diset 0 sesuai request
+                        const price = 0; 
+                        const matName = (row['Nama Bahan'] || row['Material'] || row['Bahan'])?.toString().trim().toUpperCase();
+                        const matQty = parseFloat(row['Jumlah Bahan'] || row['Qty'] || row['Amount']) || 0;
+
+                        if (prodName && matName && matQty > 0) {
+                            if (!recipeMap[prodName]) {
+                                recipeMap[prodName] = { requirements: {}, sellingPrice: price };
+                            }
+                            
+                            recipeMap[prodName].requirements[matName] = matQty;
+                        }
+                    });
+
+                    const batch = writeBatch(db);
+                    const recipesToSave = Object.entries(recipeMap);
+
+                    if(recipesToSave.length === 0) {
+                        showAlert("Format Salah", "Tidak ada data resep valid. Pastikan kolom: 'Nama Produk', 'Nama Bahan', 'Jumlah Bahan'.", "error");
+                        return;
+                    }
+
+                    recipesToSave.forEach(([name, data]) => {
+                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name);
+                        batch.set(ref, data);
+                        successCount++;
+                    });
+
+                    await batch.commit();
+                    
+                    showAlert("Sukses", `Berhasil mengimport <b>${successCount}</b> resep produk!`, "success");
+                    input.value = ''; // Reset input
+
+                } catch (err) {
+                    console.error(err);
+                    showAlert("Gagal Import", "Gagal membaca file Excel resep: " + err.message, "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
         };
 
         window.renderProductDropdown = () => {
@@ -1235,7 +1368,7 @@
         </nav>
 
         <div class="p-4 border-t border-slate-800 text-xs text-slate-600 text-center">
-            v4.8 Batch Delete History<br>
+            v5.0 Recipe Import<br>
             &copy; 2025 Vikrama Kulapati
         </div>
     </aside>
@@ -1354,6 +1487,12 @@
                         <h2 class="text-3xl font-bold text-white mb-2">Pabrik Perakitan</h2>
                         <p class="text-slate-400">Ubah bahan mentah menjadi produk senjata siap jual.</p>
                     </div>
+                    <div>
+                         <button onclick="document.getElementById('recipe-import-input').click()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                            <i class="fas fa-file-excel mr-2"></i> Import Resep (Excel)
+                         </button>
+                         <input type="file" id="recipe-import-input" accept=".xlsx, .xls" class="hidden" onchange="importRecipeExcel(this)">
+                    </div>
                 </header>
 
                 <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
@@ -1364,22 +1503,18 @@
                                 <input type="text" id="cr-name" placeholder="NAMA PRODUK (CONTOH: AK-47)" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white font-bold uppercase outline-none focus:border-purple-500">
                                 <div class="bg-slate-900/50 p-3 rounded border border-slate-800">
                                     <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Komposisi Bahan (Dari Gudang)</p>
-                                    <div id="cr-inputs" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar"></div>
-                                </div>
-                                <div class="flex items-center bg-slate-800 rounded border border-slate-700 p-2">
-                                    <span class="text-slate-500 text-xs font-bold mr-2">Harga Jual: Rp</span>
-                                    <input type="number" id="cr-price" placeholder="0" class="bg-transparent w-full text-white font-bold outline-none text-sm">
+                                    <div id="cr-inputs" class="grid grid-cols-2 gap-2"></div>
                                 </div>
                                 <button class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded transition">SIMPAN RESEP</button>
                             </form>
                         </div>
                         
-                        <div class="glass-panel p-6 rounded-xl">
-                            <h3 class="text-sm font-bold text-slate-400 mb-2">Daftar Resep Aktif</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left">
-                                    <tbody id="cr-table-body"></tbody>
-                                </table>
+                        <div class="glass-panel p-6 rounded-xl flex flex-col h-[600px]">
+                            <h3 class="text-sm font-bold text-slate-400 mb-4 flex items-center">
+                                <i class="fas fa-clipboard-list mr-2 text-purple-500"></i>Daftar Resep Aktif
+                            </h3>
+                            <div id="cr-recipe-list" class="space-y-3 overflow-y-auto custom-scrollbar pr-1 flex-1">
+                                <!-- Cards injected via JS -->
                             </div>
                         </div>
                     </div>
@@ -1717,4 +1852,3 @@
 
 </body>
 </html>
-
