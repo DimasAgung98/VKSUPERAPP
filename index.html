@@ -62,8 +62,11 @@
         let warehouseStock = {}; 
         let warehouseHistory = []; 
         let warehouseSpecificHistory = [];
+        let craftingHistory = []; 
         let productStock = [];
         let recipes = {};
+        let materialPrices = {}; 
+        let craftQueue = []; // ANTRIAN CRAFTING
         
         // --- MODAL STATE ---
         let currentAction = null; 
@@ -108,13 +111,24 @@
                     warehouseStock = snap.data();
                     renderWarehouseTable();
                     renderCraftingInputs();
-                    renderRecipeTable(); // PERBAIKAN: Render ulang kartu resep saat stok berubah
+                    renderRecipeTable(); 
+                    renderCraftQueue(); 
+                    renderMaterialStockPreview();
                 } else {
                     warehouseStock = {};
                     renderWarehouseTable();
                     renderCraftingInputs();
-                    renderRecipeTable(); // PERBAIKAN: Render ulang kartu resep saat stok kosong
+                    renderRecipeTable(); 
+                    renderCraftQueue();
+                    renderMaterialStockPreview();
                 }
+            });
+            
+            // Listener Harga Bahan
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'material_prices', 'main_prices'), (snap) => {
+                if(snap.exists()) materialPrices = snap.data();
+                else materialPrices = {};
+                renderPriceListTable();
             });
 
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'recipes'), (snap) => {
@@ -140,7 +154,11 @@
             onSnapshot(qWhHist, (snap) => {
                 const allLogs = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 warehouseSpecificHistory = allLogs.filter(log => log.type === 'WAREHOUSE');
+                // Filter juga untuk Crafting History
+                craftingHistory = allLogs.filter(log => log.type === 'CRAFTING');
+                
                 renderWarehouseSpecificHistory();
+                renderCraftingHistory(); // Update modal jika terbuka
             });
         }
 
@@ -155,9 +173,8 @@
 
             titleEl.textContent = title;
             msgEl.innerHTML = message;
-            actions.innerHTML = ''; // Clear buttons
+            actions.innerHTML = ''; 
 
-            // Icon & Style Logic
             iconWrapper.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto';
             if (type === 'success') {
                 iconWrapper.classList.add('bg-emerald-500/20', 'text-emerald-500');
@@ -173,7 +190,6 @@
                 icon.className = 'fas fa-info text-3xl';
             }
 
-            // OK Button
             const btn = document.createElement('button');
             btn.className = 'w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition shadow-lg';
             btn.textContent = 'OK';
@@ -196,7 +212,6 @@
             actions.innerHTML = '';
             currentConfirmCallback = callback;
 
-            // Icon Style
             iconWrapper.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto';
             if (type === 'danger') {
                 iconWrapper.classList.add('bg-rose-500/20', 'text-rose-500');
@@ -206,7 +221,6 @@
                 icon.className = 'fas fa-question text-3xl';
             }
 
-            // Buttons
             const btnCancel = document.createElement('button');
             btnCancel.className = 'flex-1 py-2.5 border border-slate-600 text-slate-300 hover:bg-slate-800 rounded-lg font-bold transition mr-3';
             btnCancel.textContent = 'Batal';
@@ -312,6 +326,156 @@
                 } catch (err) {
                     console.error(err);
                     showAlert("Gagal Import", "Terjadi kesalahan saat membaca file Excel.", "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+        
+        // --- NEW FEATURE: MATERIAL PRICE MANAGEMENT ---
+        window.openPriceModal = () => {
+            renderPriceListTable();
+            document.getElementById('priceModal').classList.remove('hidden');
+        };
+
+        window.closePriceModal = () => {
+            document.getElementById('priceModal').classList.add('hidden');
+        };
+
+        window.renderPriceListTable = () => {
+            const tbody = document.getElementById('price-table-body');
+            if(!tbody) return;
+            
+            const search = document.getElementById('price-search')?.value.toUpperCase() || '';
+            tbody.innerHTML = '';
+
+            const allItems = new Set([...Object.keys(warehouseStock), ...Object.keys(materialPrices)]);
+            
+            if(allItems.size === 0) {
+                 tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500 italic">Belum ada data bahan.</td></tr>';
+                 return;
+            }
+
+            const sortedItems = Array.from(allItems).sort();
+            let count = 0;
+
+            sortedItems.forEach(name => {
+                if(name.toUpperCase().includes(search)) {
+                    const price = materialPrices[name] || 0;
+                    const stock = warehouseStock[name] || 0;
+                    
+                    tbody.innerHTML += `
+                        <tr class="border-b border-slate-700 hover:bg-slate-700/50">
+                            <td class="p-3 text-sm font-bold text-slate-200">${name}</td>
+                            <td class="p-3 text-sm text-right font-mono text-emerald-400">Rp ${price.toLocaleString()}</td>
+                            <td class="p-3 text-xs text-right text-slate-400">${stock.toLocaleString()} Unit</td>
+                            <td class="p-3 text-center">
+                                <div class="flex justify-center gap-2">
+                                    <button onclick="openEditPriceModal('${name}', ${price})" class="text-blue-400 hover:text-white" title="Edit Harga">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteMaterialPrice('${name}')" class="text-rose-400 hover:text-white" title="Hapus Harga">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    count++;
+                }
+            });
+
+            if(count === 0) tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500 italic">Tidak ditemukan.</td></tr>';
+        };
+
+        window.openEditPriceModal = (name, currentPrice) => {
+            document.getElementById('edit-price-name').value = name;
+            document.getElementById('edit-price-value').value = currentPrice;
+            document.getElementById('editPriceModal').classList.remove('hidden');
+        };
+
+        window.closeEditPriceModal = () => {
+            document.getElementById('editPriceModal').classList.add('hidden');
+        };
+
+        window.savePriceUpdate = async () => {
+            const name = document.getElementById('edit-price-name').value;
+            const price = parseFloat(document.getElementById('edit-price-value').value);
+
+            if(!name || isNaN(price) || price < 0) {
+                return showAlert("Error", "Harga tidak valid", "error");
+            }
+
+            try {
+                const newPrices = { ...materialPrices };
+                newPrices[name] = price;
+                
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'material_prices', 'main_prices'), newPrices);
+                showAlert("Sukses", `Harga <b>${name}</b> berhasil diupdate!`, "success");
+                closeEditPriceModal();
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal update harga: " + err.message, "error");
+            }
+        };
+
+        window.deleteMaterialPrice = (name) => {
+            showConfirm("Hapus Harga?", `Yakin ingin menghapus data harga untuk <b>${name}</b>? Stok gudang tidak akan terhapus.`, async () => {
+                try {
+                    const newPrices = { ...materialPrices };
+                    delete newPrices[name];
+                    
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'material_prices', 'main_prices'), newPrices);
+                    showAlert("Sukses", `Data harga ${name} dihapus.`, "success");
+                } catch(err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal menghapus harga: " + err.message, "error");
+                }
+            }, "danger");
+        };
+
+        window.importPriceExcel = async (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                    if (jsonData.length === 0) return showAlert("File Kosong", "Data tidak ditemukan.", "warning");
+
+                    const newPrices = { ...materialPrices };
+                    let updatedCount = 0;
+
+                    jsonData.forEach(row => {
+                        // Flexible key matching
+                        const nameKey = Object.keys(row).find(k => k.toLowerCase().includes('nama') || k.toLowerCase().includes('bahan'));
+                        const priceKey = Object.keys(row).find(k => k.toLowerCase().includes('harga') || k.toLowerCase().includes('price') || k.toLowerCase().includes('modal'));
+
+                        if (nameKey && priceKey) {
+                            const name = String(row[nameKey]).trim().toUpperCase();
+                            const price = parseFloat(row[priceKey]);
+                            
+                            if (name && !isNaN(price)) {
+                                newPrices[name] = price;
+                                updatedCount++;
+                            }
+                        }
+                    });
+
+                    if (updatedCount > 0) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'material_prices', 'main_prices'), newPrices);
+                        showAlert("Sukses", `Berhasil memperbarui harga <b>${updatedCount}</b> bahan!`, "success");
+                    } else {
+                        showAlert("Gagal", "Tidak ada kolom 'Nama Bahan' atau 'Harga' yang valid.", "error");
+                    }
+                    input.value = '';
+                } catch (err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal membaca Excel: " + err.message, "error");
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -689,63 +853,6 @@
             document.getElementById('reportModal').classList.remove('hidden');
         };
 
-        document.getElementById('btnDownloadReport').addEventListener('click', () => {
-            if(!currentReportElement) return;
-            const btn = document.getElementById('btnDownloadReport');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
-            btn.disabled = true;
-            html2canvas(currentReportElement, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false }).then(canvas => {
-                const link = document.createElement('a');
-                const typeText = currentReportElement.querySelector('#recType').textContent;
-                const itemName = currentReportElement.querySelector('#recItem').textContent.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                link.download = `Report_${typeText}_${itemName}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                showToast("Laporan berhasil diunduh!", "success");
-            }).catch(err => { console.error(err); showAlert("Gagal Download", err.message, "error"); }).finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
-        });
-
-        window.closeReportModal = () => document.getElementById('reportModal').classList.add('hidden');
-
-        window.rollbackLog = async (logId) => {
-            const log = warehouseSpecificHistory.find(l => l.id === logId);
-            if(!log) return;
-
-            showConfirm(
-                "Hapus & Rollback?", 
-                `Apakah Anda yakin ingin menghapus transaksi ini? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Stok '${log.itemName}' akan dikembalikan (Rollback).</span>`,
-                async () => {
-                     try {
-                        const currentItemStock = warehouseStock[log.itemName] || 0;
-                        let revertedStock = currentItemStock;
-
-                        if (log.subtype === 'DEPOSIT') {
-                            revertedStock -= log.amount; 
-                        } else if (log.subtype === 'WITHDRAW') {
-                            revertedStock += log.amount;
-                        } else if (log.subtype === 'BATCH') {
-                             showAlert("Perhatian", "Hapus log batch hanya menghapus catatan. Stok tidak dikembalikan otomatis untuk batch.", "warning");
-                             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
-                             return;
-                        }
-
-                        if (revertedStock < 0) revertedStock = 0;
-
-                        const updated = { ...warehouseStock, [log.itemName]: revertedStock };
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
-
-                        showAlert("Berhasil", "Transaksi dihapus & stok dikembalikan.", "success");
-                    } catch (err) {
-                        console.error(err);
-                        showAlert("Error", "Gagal rollback: " + err.message, "error");
-                    }
-                },
-                "danger"
-            );
-        };
-
         window.showImagePreview = (src) => { document.getElementById('preview-img-content').src = src; document.getElementById('image-preview-modal').classList.remove('hidden'); };
         window.closeImagePreview = () => document.getElementById('image-preview-modal').classList.add('hidden');
 
@@ -909,6 +1016,8 @@
         
         window.renderCraftingInputs = () => {
             const container = document.getElementById('cr-inputs');
+            if(!container) return; // Safety check if element doesn't exist yet
+
             if(Object.keys(warehouseStock).length === 0) {
                 container.innerHTML = '<p class="text-xs text-slate-500 col-span-2">Belum ada bahan di Gudang. Input di menu Warehouse dulu.</p>';
                 return;
@@ -942,6 +1051,7 @@
             });
             document.getElementById('cr-form').reset();
             showAlert("Sukses", `Resep ${name} berhasil disimpan.`, "success");
+            closeRecipeModal();
         };
 
         window.renderRecipeTable = () => {
@@ -950,55 +1060,54 @@
 
              const keys = Object.keys(recipes);
              if (keys.length === 0) {
-                 container.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic border-2 border-dashed border-slate-700 rounded-lg">Belum ada resep.<br>Buat baru di form atas atau import Excel.</div>';
-                 return;
-             }
+                 container.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic border-2 border-dashed border-slate-700 rounded-lg">Belum ada resep aktif.</div>';
+             } else {
+                container.innerHTML = keys.map(name => {
+                    const rec = recipes[name];
+                    const reqs = Object.entries(rec.requirements).map(([m,q]) => {
+                        const currentStock = warehouseStock[m] || 0;
+                        const isEnough = currentStock >= q;
+                        const stockColor = isEnough ? 'text-slate-400' : 'text-rose-500 font-bold';
+                        
+                        return `<div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-700/50 pb-1 mb-1 last:border-0 last:mb-0 last:pb-0">
+                            <span>${m}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] ${stockColor} mr-1" title="Stok Gudang">${currentStock}</span>
+                                <span class="font-mono text-emerald-400 font-bold bg-slate-900 px-1.5 rounded" title="Butuh per unit">${q}</span>
+                            </div>
+                        </div>`;
+                    }).join('');
 
-             container.innerHTML = keys.map(name => {
-                 const rec = recipes[name];
-                 
-                 // Format ingredients as a nice list with stock check
-                 const reqs = Object.entries(rec.requirements).map(([m,q]) => {
-                    const currentStock = warehouseStock[m] || 0;
-                    const isEnough = currentStock >= q;
-                    const stockColor = isEnough ? 'text-slate-400' : 'text-rose-500 font-bold';
-                    
-                    return `<div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-700/50 pb-1 mb-1 last:border-0 last:mb-0 last:pb-0">
-                        <span>${m}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] ${stockColor} mr-1" title="Butuh / Punya">${q} / ${currentStock}</span>
-                            <span class="font-mono text-emerald-400 font-bold bg-slate-900 px-1.5 rounded">${q}</span>
-                        </div>
-                    </div>`;
-                 }).join('');
-
-                 return `
-                    <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
-                        <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
-                            <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
-                                <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
-                            </h4>
-                            <div class="flex gap-1">
-                                <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
-                                    <i class="fas fa-edit text-xs"></i>
-                                </button>
-                                <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
-                                    <i class="fas fa-trash-alt text-xs"></i>
-                                </button>
+                    return `
+                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
+                            <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
+                                <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
+                                    <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
+                                </h4>
+                                <div class="flex gap-1">
+                                    <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
+                                        <i class="fas fa-trash-alt text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/50 rounded p-2 border border-slate-800/50">
+                                <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-1">
+                                    <p class="text-[10px] uppercase font-bold text-slate-500">Komposisi Bahan</p>
+                                    <p class="text-[9px] text-slate-500 italic">(Punya / Butuh)</p>
+                                </div>
+                                <div class="space-y-1">
+                                    ${reqs}
+                                </div>
                             </div>
                         </div>
-                        <div class="bg-slate-900/50 rounded p-2 border border-slate-800/50">
-                            <div class="flex justify-between items-center mb-2">
-                                <p class="text-[10px] uppercase font-bold text-slate-600">Komposisi Bahan:</p>
-                                <p class="text-[9px] text-slate-500 italic">(Butuh / Punya)</p>
-                            </div>
-                            <div class="space-y-1">
-                                ${reqs}
-                            </div>
-                        </div>
-                    </div>
-                 `;
-             }).join('');
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('recipeListModal').classList.remove('hidden');
         };
 
         // --- NEW FEATURE: EDIT RECIPE ---
@@ -1019,12 +1128,8 @@
                 if(input) input.value = qty;
             });
 
-            // 4. Beri notifikasi & Scroll ke form
-            showAlert("Mode Edit", `Resep <b>${name}</b> telah dimuat di form sebelah kiri.<br>Silakan ubah komposisi lalu klik <b>SIMPAN RESEP</b> untuk memperbarui.`, "info");
-            
-            // Scroll ke bagian form (berguna di tampilan mobile)
-            document.getElementById('crafting').scrollIntoView({ behavior: 'smooth' });
-            nameInput.focus();
+            // 4. Buka Modal
+            openRecipeModal("Edit Resep: " + name);
         };
 
         window.deleteRecipe = async (name) => {
@@ -1102,80 +1207,723 @@
         };
 
         window.renderProductDropdown = () => {
-            const sel = document.getElementById('cr-select-product');
-            sel.innerHTML = '<option value="">-- Pilih Produk --</option>' + 
+            const options = '<option value="">-- Pilih Produk --</option>' + 
                 Object.keys(recipes).map(r => `<option value="${r}">${r}</option>`).join('');
+            
+            // Dropdown untuk Produksi Massal
+            const s1 = document.getElementById('cr-select-product');
+            if(s1) s1.innerHTML = options;
         };
 
-        window.calculateCraft = () => {
-            const prod = document.getElementById('cr-select-product').value;
-            const qty = parseInt(document.getElementById('cr-qty').value) || 1;
-            const btn = document.getElementById('btn-craft');
-            const detail = document.getElementById('cr-calc-detail');
-            
-            if(!prod) return;
-            const rec = recipes[prod];
-            let canCraft = true;
-            let html = `<ul class="text-xs space-y-1 mt-2">`;
-            
-            Object.entries(rec.requirements).forEach(([mat, req]) => {
-                const totalReq = req * qty;
-                const available = warehouseStock[mat] || 0;
-                const isEnough = available >= totalReq;
-                if(!isEnough) canCraft = false;
-                html += `<li class="flex justify-between ${isEnough ? 'text-slate-300' : 'text-rose-500 font-bold'}">
-                    <span>${mat}</span>
-                    <span>${totalReq} / ${available}</span>
-                </li>`;
-            });
-            html += '</ul>';
-            detail.innerHTML = html;
-            btn.disabled = !canCraft;
-            btn.className = `w-full mt-4 p-3 rounded font-bold transition ${canCraft ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`;
-            btn.innerHTML = canCraft ? `<i class="fas fa-hammer mr-2"></i>RAKIT ${qty} UNIT` : `<i class="fas fa-times mr-2"></i>BAHAN KURANG`;
-        };
+        // NEW FUNCTION: GENERIC ELEMENT SCREENSHOT
+        window.takeElementScreenshot = async (elementId, fileNamePrefix) => {
+            const element = document.getElementById(elementId);
+            if (!element) return;
 
-        window.doCraft = async () => {
-            const prod = document.getElementById('cr-select-product').value;
-            const qty = parseInt(document.getElementById('cr-qty').value) || 1;
-            const rec = recipes[prod];
-            
-            const newWhStock = { ...warehouseStock };
-            Object.entries(rec.requirements).forEach(([mat, req]) => {
-                newWhStock[mat] -= (req * qty);
-            });
-            
-            const existingProd = productStock.find(p => p.name === prod);
-            const batch = writeBatch(db);
-            
-            batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), newWhStock);
-            
-            if(existingProd) {
-                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', existingProd.id);
-                batch.update(prodRef, { stock: (existingProd.stock || 0) + qty });
-            } else {
-                const newProdRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'products'));
-                batch.set(newProdRef, {
-                    name: prod,
-                    category: 'Senjata',
-                    stock: qty,
-                    sellingPrice: rec.sellingPrice,
-                    costPrice: 0
+            try {
+                // Visual feedback (cursor wait)
+                document.body.style.cursor = 'wait';
+                
+                const canvas = await html2canvas(element, {
+                    backgroundColor: '#1e293b', // Match dark theme slate-800
+                    scale: 2, 
+                    logging: false,
+                    ignoreElements: (el) => el.tagName === 'BUTTON' // Optional: Hide buttons in screenshot
                 });
+
+                const link = document.createElement('a');
+                link.download = `${fileNamePrefix}_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showToast("Screenshot berhasil disimpan!", "success");
+            } catch (err) {
+                console.error(err);
+                showAlert("Gagal", "Screenshot error: " + err.message, "error");
+            } finally {
+                document.body.style.cursor = 'default';
+            }
+        };
+
+        // --- NEW CRAFTING QUEUE LOGIC ---
+        
+        window.addToCraftQueue = () => {
+            const prod = document.getElementById('cr-select-product').value;
+            const qty = parseInt(document.getElementById('cr-qty').value) || 1;
+            
+            if(!prod) return showAlert("Error", "Pilih produk terlebih dahulu.", "warning");
+            if(qty <= 0) return showAlert("Error", "Jumlah harus minimal 1.", "warning");
+
+            // Check if item already in queue
+            const existingItem = craftQueue.find(item => item.name === prod);
+            if(existingItem) {
+                existingItem.qty += qty;
+            } else {
+                craftQueue.push({ name: prod, qty: qty });
             }
             
-            const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
-            batch.set(logRef, {
-                type: 'CRAFTING',
-                desc: `Merakit ${qty}x ${prod}`,
-                timestamp: serverTimestamp(),
-                pic: 'Operator'
+            renderCraftQueue();
+            // Reset quantity input but keep product selected
+            document.getElementById('cr-qty').value = 1;
+        };
+
+        window.removeFromCraftQueue = (index) => {
+            craftQueue.splice(index, 1);
+            renderCraftQueue();
+        };
+
+        window.resetCraftQueue = () => {
+            craftQueue = [];
+            renderCraftQueue();
+        };
+
+        window.renderCraftQueue = () => {
+            const listContainer = document.getElementById('cr-queue-list');
+            const summaryContainer = document.getElementById('cr-queue-summary');
+            const btnProcess = document.getElementById('btn-process-queue');
+            
+            // Render Queue List
+            if (craftQueue.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-slate-500 text-xs italic py-4">Antrean kosong. Tambahkan produk.</div>';
+                summaryContainer.innerHTML = '<div class="text-center text-slate-500 text-xs italic">Belum ada estimasi.</div>';
+                // Reset wrapper content if exists
+                const wrapper = document.getElementById('total-estimation-wrapper');
+                if(wrapper) wrapper.innerHTML = '<h4 class="text-[11px] font-bold text-slate-400 uppercase mb-3 flex items-center gap-2"><i class="fas fa-calculator"></i> Total Estimasi Bahan (Semua Item)</h4><div class="text-center text-slate-500 text-xs italic">Belum ada estimasi.</div>';
+                
+                btnProcess.disabled = true;
+                btnProcess.className = "w-full bg-slate-700 text-slate-500 font-bold p-3 rounded cursor-not-allowed";
+                btnProcess.innerHTML = "ANTREAN KOSONG";
+                return;
+            }
+
+            // MODIFIED: Tampilkan resep terpisah per item di antrean
+            listContainer.innerHTML = craftQueue.map((item, idx) => {
+                const rec = recipes[item.name];
+                let ingredientsHtml = '';
+                
+                if (rec) {
+                    ingredientsHtml = '<div class="mt-2 pt-2 border-t border-slate-600/50 grid grid-cols-2 gap-x-4 gap-y-1">';
+                    Object.entries(rec.requirements).forEach(([mat, baseReq]) => {
+                        const totalReqItem = baseReq * item.qty;
+                        ingredientsHtml += `
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-slate-400">${mat}</span>
+                                <span class="font-mono text-purple-300 font-bold">${totalReqItem}</span>
+                            </div>
+                        `;
+                    });
+                    ingredientsHtml += '</div>';
+                }
+
+                return `
+                <div id="queue-item-${idx}" class="bg-slate-700/40 p-3 rounded-lg border border-slate-600 mb-3 relative group hover:border-purple-500/50 transition">
+                    <button onclick="removeFromCraftQueue(${idx})" class="absolute top-2 right-2 text-slate-500 hover:text-rose-500 transition" title="Hapus dari antrean">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button onclick="takeElementScreenshot('queue-item-${idx}', 'Rincian_${item.name}')" class="absolute top-2 right-8 text-slate-400 hover:text-white transition" title="Screenshot Kartu Ini">
+                        <i class="fas fa-camera text-xs"></i>
+                    </button>
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <h4 class="font-bold text-white text-sm uppercase text-blue-400">${item.name}</h4>
+                        <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">x${item.qty}</span>
+                    </div>
+                    <!-- Resep Terlampir -->
+                    ${ingredientsHtml}
+                </div>
+            `;}).join('');
+
+            // Calculate Total Resources Needed
+            const totalResources = {};
+            craftQueue.forEach(item => {
+                const rec = recipes[item.name];
+                if(rec) {
+                    Object.entries(rec.requirements).forEach(([mat, req]) => {
+                        const totalReq = req * item.qty;
+                        totalResources[mat] = (totalResources[mat] || 0) + totalReq;
+                    });
+                }
             });
 
-            await batch.commit();
-            showAlert("Produksi Sukses", `Berhasil merakit ${qty}x ${prod}! Stok Gudang berkurang, Stok Toko bertambah.`, "success");
-            window.calculateCraft();
+            // Render Resource Summary (MODIFIED: Full View / No Scroll)
+            let allAvailable = true;
+            let summaryHTML = '<div class="grid grid-cols-1 gap-2">'; 
+            
+            Object.entries(totalResources).forEach(([mat, req]) => {
+                const stock = warehouseStock[mat] || 0;
+                const isEnough = stock >= req;
+                if(!isEnough) allAvailable = false;
+                
+                const colorClass = isEnough ? 'text-emerald-400' : 'text-rose-500 font-bold';
+                const statusIcon = isEnough ? '<i class="fas fa-check-circle text-emerald-500"></i>' : '<i class="fas fa-exclamation-triangle text-rose-500"></i>';
+                
+                summaryHTML += `
+                    <div class="flex justify-between items-center text-xs bg-slate-800 p-2.5 rounded border border-slate-700">
+                        <div class="flex items-center gap-2">
+                            ${statusIcon}
+                            <span class="text-slate-300 font-bold">${mat}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="text-right">
+                                <div class="text-[9px] text-slate-500 uppercase">Stok</div>
+                                <div class="text-slate-300 font-mono">${stock}</div>
+                            </div>
+                            <div class="h-6 w-px bg-slate-600 mx-1"></div>
+                            <div class="text-right">
+                                <div class="text-[9px] text-slate-500 uppercase">Butuh</div>
+                                <div class="${colorClass} font-mono text-sm">${req}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            summaryHTML += '</div>';
+            
+            if(!allAvailable) {
+                summaryHTML += `<div class="mt-4 text-xs text-rose-200 font-bold text-center bg-rose-900/50 border border-rose-500/50 p-3 rounded-lg flex items-center justify-center gap-2 animate-pulse">
+                    <i class="fas fa-hand-paper"></i> Stok tidak mencukupi untuk memproses semua antrean!
+                </div>`;
+            }
+
+            // Update Summary Container with ID for screenshot
+            const wrapper = document.getElementById('total-estimation-wrapper');
+            if(wrapper) {
+                wrapper.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                            <i class="fas fa-calculator"></i> Total Estimasi Bahan
+                        </h4>
+                        <button onclick="takeElementScreenshot('total-estimation-wrapper', 'Estimasi_Total_Produksi')" class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition" title="Screenshot Total">
+                            <i class="fas fa-camera text-xs"></i>
+                        </button>
+                    </div>
+                    ${summaryHTML}
+                `;
+            }
+
+            // Enable/Disable Process Button
+            btnProcess.disabled = !allAvailable;
+            btnProcess.className = `w-full mt-6 p-4 rounded-lg font-bold transition shadow-lg text-sm uppercase tracking-wider ${allAvailable ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`;
+            btnProcess.innerHTML = allAvailable ? `<i class="fas fa-industry mr-2"></i>PROSES PRODUKSI (${craftQueue.length} Jenis)` : `<i class="fas fa-ban mr-2"></i>BAHAN KURANG`;
         };
+
+        window.processCraftQueue = async () => {
+            if(craftQueue.length === 0) return;
+
+            showConfirm("Konfirmasi Produksi", `Yakin ingin merakit <b>${craftQueue.length} jenis produk</b> sekaligus?`, async () => {
+                try {
+                    const batch = writeBatch(db);
+                    const newWhStock = { ...warehouseStock };
+                    const historyDetails = [];
+                    const logDataPayload = []; // For structured history
+
+                    // 1. Calculate Deductions & Updates
+                    craftQueue.forEach(item => {
+                        const rec = recipes[item.name];
+                        const matUsed = {};
+                        
+                        // Deduct Materials
+                        Object.entries(rec.requirements).forEach(([mat, req]) => {
+                            const totalNeeded = req * item.qty;
+                            newWhStock[mat] -= totalNeeded;
+                            matUsed[mat] = totalNeeded;
+                        });
+
+                        // Update Product Stock
+                        const existingProd = productStock.find(p => p.name === item.name);
+                        if(existingProd) {
+                            const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', existingProd.id);
+                            batch.update(prodRef, { stock: (existingProd.stock || 0) + item.qty });
+                        } else {
+                            const newProdRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'products'));
+                            batch.set(newProdRef, {
+                                name: item.name,
+                                category: 'Senjata',
+                                stock: item.qty,
+                                sellingPrice: rec.sellingPrice,
+                                costPrice: 0
+                            });
+                        }
+                        
+                        historyDetails.push(`${item.name} (x${item.qty})`);
+                        logDataPayload.push({
+                            name: item.name,
+                            qty: item.qty,
+                            materials: matUsed
+                        });
+                    });
+
+                    // 2. Set Updated Warehouse Stock
+                    batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), newWhStock);
+
+                    // 3. Create Log with Detailed Payload
+                    const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
+                    batch.set(logRef, {
+                        type: 'CRAFTING',
+                        desc: `Produksi Massal: ${historyDetails.join(', ')}`,
+                        timestamp: serverTimestamp(),
+                        pic: 'Operator (Batch)',
+                        details: logDataPayload // Storing structured data here
+                    });
+
+                    // 4. Commit
+                    await batch.commit();
+                    
+                    showAlert("Sukses", "Produksi massal berhasil diselesaikan!", "success");
+                    resetCraftQueue();
+
+                } catch(err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal memproses antrean: " + err.message, "error");
+                }
+            }, "info");
+        };
+
+        // --- NEW: CRAFTING HISTORY LOGIC ---
+        window.openCraftingHistory = () => {
+            renderCraftingHistory();
+            document.getElementById('craftingHistoryModal').classList.remove('hidden');
+        };
+
+        window.closeCraftingHistory = () => {
+            document.getElementById('craftingHistoryModal').classList.add('hidden');
+        };
+
+        window.renderCraftingHistory = () => {
+            const container = document.getElementById('craftingHistoryContent');
+            if(!container) return;
+
+            if (craftingHistory.length === 0) {
+                container.innerHTML = '<div class="text-center text-slate-500 text-sm py-10 italic">Belum ada riwayat produksi.</div>';
+                return;
+            }
+
+            container.innerHTML = craftingHistory.map((log, index) => {
+                const date = log.timestamp ? new Date(log.timestamp.seconds*1000).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+                
+                let detailsHtml = '';
+                
+                // Jika log memiliki struktur detail baru (details array)
+                if (log.details && Array.isArray(log.details)) {
+                     detailsHtml = log.details.map(item => {
+                        let matsHtml = '';
+                        if(item.materials) {
+                            matsHtml = Object.entries(item.materials).map(([mat, qty]) => 
+                                `<span class="text-xs text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">${mat}: ${qty}</span>`
+                            ).join(' ');
+                        }
+
+                        return `
+                            <div class="mb-2 pb-2 border-b border-slate-700/50 last:border-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-emerald-400 text-sm">${item.name}</span>
+                                    <span class="bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded font-bold">x${item.qty}</span>
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    ${matsHtml}
+                                </div>
+                            </div>
+                        `;
+                     }).join('');
+                } else {
+                    // Fallback untuk log lama (hanya deskripsi string)
+                    detailsHtml = `<p class="text-slate-400 text-xs italic">${log.desc}</p>`;
+                }
+
+                return `
+                    <div id="craft-log-${index}" class="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-4 relative group">
+                        <div class="flex justify-between items-start mb-3 border-b border-slate-700 pb-2">
+                            <div>
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Waktu Produksi</p>
+                                <p class="text-sm text-white font-mono">${date}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Operator</p>
+                                <p class="text-xs text-slate-300">${log.pic || '-'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-900/50 rounded p-3 mb-2">
+                            ${detailsHtml}
+                        </div>
+
+                        <div class="flex justify-end pt-2">
+                            <button onclick="takeElementScreenshot('craft-log-${index}', 'Log_Produksi_${index}')" class="text-xs flex items-center bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded transition">
+                                <i class="fas fa-camera mr-2"></i> Simpan Bukti
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // --- NEW: MATERIAL STOCK PREVIEW ---
+        window.renderMaterialStockPreview = () => {
+            const container = document.getElementById('material-stock-preview');
+            if(!container) return;
+            
+            if(Object.keys(warehouseStock).length === 0) {
+                container.innerHTML = '<span class="text-slate-500 text-xs">Belum ada stok bahan.</span>';
+                return;
+            }
+
+            container.innerHTML = Object.entries(warehouseStock).sort().map(([name, qty]) => `
+                <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1.5 rounded border border-slate-700/50">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">${name}</span>
+                    <span class="text-xs font-bold text-emerald-400">${qty}</span>
+                </div>
+            `).join('');
+        };
+
+        // --- NEW FEATURE: STOCK SCREENSHOT ---
+        window.downloadStockScreenshot = async () => {
+            const btn = document.getElementById('btn-stock-screenshot');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                // 1. Buat Container Invisible untuk Render Report
+                const exportContainer = document.createElement('div');
+                exportContainer.style.position = 'absolute';
+                exportContainer.style.top = '-9999px';
+                exportContainer.style.left = '-9999px';
+                exportContainer.style.width = '600px';
+                exportContainer.style.backgroundColor = '#1e293b'; // slate-800 context
+                exportContainer.style.color = '#fff';
+                exportContainer.style.padding = '30px';
+                exportContainer.style.borderRadius = '12px';
+                exportContainer.style.fontFamily = 'Inter, sans-serif';
+                
+                // 2. Isi Konten Laporan
+                const date = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+                const totalItems = Object.keys(warehouseStock).length;
+                
+                let rows = '';
+                if(totalItems === 0) {
+                    rows = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic">Gudang Kosong</td></tr>';
+                } else {
+                    rows = Object.entries(warehouseStock).sort().map(([name, qty]) => `
+                        <tr class="border-b border-slate-600/50">
+                            <td class="py-2 px-3 font-bold text-slate-200">${name}</td>
+                            <td class="py-2 px-3 text-right font-mono text-emerald-400 font-bold">${qty.toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                exportContainer.innerHTML = `
+                    <div class="mb-6 border-b-2 border-emerald-500 pb-4 flex justify-between items-start">
+                        <div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Laporan Stok Gudang</h2>
+                            <p class="text-sm text-emerald-400 font-medium mt-1">Vikrama ERP System</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-slate-400 uppercase font-bold">Waktu Generate</div>
+                            <div class="text-sm text-white font-mono">${date}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-700 text-xs text-slate-300 uppercase font-bold">
+                                <tr>
+                                    <th class="py-3 px-3 text-left">Nama Material</th>
+                                    <th class="py-3 px-3 text-right">Jumlah Stok</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6 flex justify-between items-end text-[10px] text-slate-500 font-mono border-t border-slate-700 pt-4">
+                        <span>Total Item: ${totalItems}</span>
+                        <span>Authorized Document</span>
+                    </div>
+                `;
+
+                document.body.appendChild(exportContainer);
+
+                // 3. Generate Canvas
+                const canvas = await html2canvas(exportContainer, {
+                    backgroundColor: '#0f172a', // Background body slate-900
+                    scale: 2, // High resolution
+                    logging: false
+                });
+
+                // 4. Download
+                document.body.removeChild(exportContainer);
+                const link = document.createElement('a');
+                link.download = `Stok_Gudang_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showToast("Laporan stok berhasil diunduh!", "success");
+
+            } catch (err) {
+                console.error(err);
+                showAlert("Gagal", "Terjadi kesalahan saat mengambil screenshot: " + err.message, "error");
+            } finally {
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
+        };
+
+        // --- NEW FEATURE: RECIPE SCREENSHOT ---
+        window.downloadRecipeScreenshot = async () => {
+            const btn = document.getElementById('btn-recipe-screenshot');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                // 1. Buat Container Invisible
+                const exportContainer = document.createElement('div');
+                exportContainer.style.position = 'absolute';
+                exportContainer.style.top = '-9999px';
+                exportContainer.style.left = '-9999px';
+                exportContainer.style.width = '800px'; // Lebih lebar untuk grid resep
+                exportContainer.style.backgroundColor = '#1e293b'; 
+                exportContainer.style.color = '#fff';
+                exportContainer.style.padding = '30px';
+                exportContainer.style.borderRadius = '12px';
+                exportContainer.style.fontFamily = 'Inter, sans-serif';
+                
+                const date = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+                const totalRecipes = Object.keys(recipes).length;
+                
+                let content = '';
+                if(totalRecipes === 0) {
+                    content = '<div class="p-8 text-center text-slate-500 italic">Belum ada resep aktif.</div>';
+                } else {
+                    // Grid Layout untuk Resep
+                    content = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
+                    Object.entries(recipes).forEach(([name, data]) => {
+                        const reqs = Object.entries(data.requirements).map(([m, q]) => 
+                            `<div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(148, 163, 184, 0.2); padding-bottom: 4px; margin-bottom: 4px; font-size: 11px;">
+                                <span style="color: #cbd5e1;">${m}</span>
+                                <span style="font-weight: bold; color: #34d399;">${q}</span>
+                            </div>`
+                        ).join('');
+
+                        content += `
+                            <div style="background-color: rgba(30, 41, 59, 0.5); border: 1px solid #475569; border-radius: 8px; padding: 15px;">
+                                <h4 style="font-weight: bold; color: #c084fc; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #c084fc; padding-bottom: 5px;">${name}</h4>
+                                <div>${reqs}</div>
+                            </div>
+                        `;
+                    });
+                    content += '</div>';
+                }
+
+                exportContainer.innerHTML = `
+                    <div style="margin-bottom: 20px; border-bottom: 2px solid #c084fc; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h2 style="font-size: 24px; font-weight: bold; margin: 0;">Laporan Resep Produksi</h2>
+                            <p style="font-size: 12px; color: #a78bfa; margin: 5px 0 0 0;">Vikrama ERP System - Crafting Module</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">Waktu Generate</div>
+                            <div style="font-size: 12px; font-family: monospace;">${date}</div>
+                        </div>
+                    </div>
+                    
+                    ${content}
+
+                    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #64748b; border-top: 1px solid #334155; padding-top: 15px;">
+                        <span>Total Resep: ${totalRecipes}</span>
+                        <span>Authorized Document</span>
+                    </div>
+                `;
+
+                document.body.appendChild(exportContainer);
+
+                // 3. Generate Canvas
+                const canvas = await html2canvas(exportContainer, {
+                    backgroundColor: '#0f172a',
+                    scale: 2, 
+                    logging: false
+                });
+
+                // 4. Download
+                document.body.removeChild(exportContainer);
+                const link = document.createElement('a');
+                link.download = `Resep_Produksi_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showToast("Laporan resep berhasil diunduh!", "success");
+
+            } catch (err) {
+                console.error(err);
+                showAlert("Gagal", "Screenshot error: " + err.message, "error");
+            } finally {
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
+        };
+
+        // --- NEW FEATURE: PREVIEW STOCK SCREENSHOT ---
+        window.downloadPreviewScreenshot = async () => {
+            const btn = document.getElementById('btn-preview-screenshot');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                // 1. Buat Container Invisible
+                const exportContainer = document.createElement('div');
+                exportContainer.style.position = 'absolute';
+                exportContainer.style.top = '-9999px';
+                exportContainer.style.left = '-9999px';
+                exportContainer.style.width = '600px';
+                exportContainer.style.backgroundColor = '#1e293b'; 
+                exportContainer.style.color = '#fff';
+                exportContainer.style.padding = '30px';
+                exportContainer.style.borderRadius = '12px';
+                exportContainer.style.fontFamily = 'Inter, sans-serif';
+                
+                const date = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+                
+                let content = '';
+                if(Object.keys(warehouseStock).length === 0) {
+                    content = '<div style="text-align: center; color: #64748b; font-style: italic; padding: 20px;">Belum ada stok bahan.</div>';
+                } else {
+                    // Render as chips to match preview style
+                    const chips = Object.entries(warehouseStock).sort().map(([name, qty]) => `
+                        <div style="display: inline-flex; align-items: center; background-color: rgba(30, 41, 59, 0.5); border: 1px solid rgba(51, 65, 85, 0.5); border-radius: 4px; padding: 6px 12px; margin: 4px;">
+                            <span style="font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-right: 8px;">${name}</span>
+                            <span style="font-size: 12px; font-weight: bold; color: #34d399;">${qty}</span>
+                        </div>
+                    `).join('');
+                    content = `<div style="display: flex; flex-wrap: wrap; gap: 8px;">${chips}</div>`;
+                }
+
+                exportContainer.innerHTML = `
+                    <div style="margin-bottom: 20px; border-bottom: 2px solid #34d399; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: bold; margin: 0;">Preview Stok Bahan</h2>
+                            <p style="font-size: 12px; color: #6ee7b7; margin: 5px 0 0 0;">Vikrama ERP - Crafting Module</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: bold;">Waktu Generate</div>
+                            <div style="font-size: 12px; font-family: monospace;">${date}</div>
+                        </div>
+                    </div>
+                    
+                    ${content}
+
+                    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #64748b; border-top: 1px solid #334155; padding-top: 15px;">
+                        <span>Total Item: ${Object.keys(warehouseStock).length}</span>
+                        <span>Authorized Document</span>
+                    </div>
+                `;
+
+                document.body.appendChild(exportContainer);
+
+                // 3. Generate Canvas
+                const canvas = await html2canvas(exportContainer, {
+                    backgroundColor: '#0f172a',
+                    scale: 2, 
+                    logging: false
+                });
+
+                // 4. Download
+                document.body.removeChild(exportContainer);
+                const link = document.createElement('a');
+                link.download = `Preview_Stok_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showToast("Screenshot preview stok berhasil!", "success");
+
+            } catch (err) {
+                console.error(err);
+                showAlert("Gagal", "Screenshot error: " + err.message, "error");
+            } finally {
+                btn.innerHTML = originalIcon;
+                btn.disabled = false;
+            }
+        };
+
+        // --- NEW: RECIPE MODAL FUNCTIONS ---
+        window.openRecipeModal = (title = "Buat Resep Baru") => {
+            document.getElementById('recipeModalTitle').textContent = title;
+            document.getElementById('recipeModal').classList.remove('hidden');
+        };
+
+        window.closeRecipeModal = () => {
+            document.getElementById('recipeModal').classList.add('hidden');
+            document.getElementById('cr-form').reset();
+            // Reset title back to default
+            setTimeout(() => document.getElementById('recipeModalTitle').textContent = "Buat Resep Baru", 300);
+        };
+
+        // --- NEW: LIST RESEP MODAL FUNCTION ---
+        window.openRecipeListModal = () => {
+            const container = document.getElementById('recipeListModalContent');
+            if(!container) return;
+
+            const keys = Object.keys(recipes);
+            if (keys.length === 0) {
+                container.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic border-2 border-dashed border-slate-700 rounded-lg">Belum ada resep aktif.</div>';
+            } else {
+                container.innerHTML = keys.map(name => {
+                    const rec = recipes[name];
+                    const reqs = Object.entries(rec.requirements).map(([m,q]) => {
+                        const currentStock = warehouseStock[m] || 0;
+                        const isEnough = currentStock >= q;
+                        const stockColor = isEnough ? 'text-slate-400' : 'text-rose-500 font-bold';
+                        
+                        return `<div class="flex justify-between items-center text-xs text-slate-400 border-b border-slate-700/50 pb-1 mb-1 last:border-0 last:mb-0 last:pb-0">
+                            <span>${m}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] ${stockColor} mr-1" title="Stok Gudang">${currentStock}</span>
+                                <span class="font-mono text-emerald-400 font-bold bg-slate-900 px-1.5 rounded" title="Butuh per unit">${q}</span>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    return `
+                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
+                            <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
+                                <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
+                                    <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
+                                </h4>
+                                <div class="flex gap-1">
+                                    <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
+                                        <i class="fas fa-trash-alt text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/50 rounded p-2 border border-slate-800/50">
+                                <div class="flex justify-between items-center mb-2 border-b border-slate-800 pb-1">
+                                    <p class="text-[10px] uppercase font-bold text-slate-500">Komposisi Bahan</p>
+                                    <p class="text-[9px] text-slate-500 italic">(Punya / Butuh)</p>
+                                </div>
+                                <div class="space-y-1">
+                                    ${reqs}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('recipeListModal').classList.remove('hidden');
+        };
+
+        window.closeRecipeListModal = () => {
+            document.getElementById('recipeListModal').classList.add('hidden');
+        };
+
+        // --- DEPRECATED SINGLE CRAFT (KEPT FOR REFERENCE OR REMOVED) ---
+        // calculateCraft and doCraft removed in favor of queue system for the main panel
+        window.calculateCraft = () => {}; // Dummy to prevent error if called
+        window.doCraft = async () => {}; // Dummy
 
         // ==========================================
         // MODULE 3: GUN POS (PENJUALAN)
@@ -1293,6 +2041,70 @@
             const logData = { timestamp: serverTimestamp(), ...data };
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), logData);
         };
+        
+        // --- NEW: DELETE & VIEW DETAILS GLOBAL HISTORY ---
+        window.deleteGlobalLog = (id) => {
+            showConfirm("Hapus Riwayat?", "Apakah Anda yakin ingin menghapus catatan riwayat ini? Stok tidak akan berubah.", async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', id));
+                    showToast("Riwayat berhasil dihapus.", "success");
+                } catch(err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal menghapus riwayat: " + err.message, "error");
+                }
+            }, "danger");
+        };
+
+        window.viewLogDetails = (id) => {
+            const log = warehouseHistory.find(l => l.id === id);
+            if (!log) return;
+            
+            const modal = document.getElementById('transactionDetailModal');
+            const title = document.getElementById('td-title');
+            const content = document.getElementById('td-content');
+            
+            title.textContent = `Detail Transaksi: ${log.type}`;
+            let html = '';
+            
+            // Format Content based on log type
+            if (log.details && Array.isArray(log.details)) {
+                // Crafting details structure
+                html = log.details.map(item => {
+                    let matsHtml = '';
+                    if(item.materials) {
+                        matsHtml = Object.entries(item.materials).map(([mat, qty]) => 
+                            `<div class="flex justify-between text-xs text-slate-400 border-b border-slate-700/30 pb-1 mb-1 last:border-0">
+                                <span>${mat}</span>
+                                <span class="font-mono text-emerald-400">${qty}</span>
+                             </div>`
+                        ).join('');
+                    }
+                    return `
+                        <div class="bg-slate-800 p-3 rounded mb-3 border border-slate-700">
+                            <div class="flex justify-between items-center mb-2 border-b border-slate-600 pb-2">
+                                <span class="font-bold text-white">${item.name}</span>
+                                <span class="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">x${item.qty}</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Bahan Digunakan:</p>
+                                ${matsHtml || '<span class="text-xs text-slate-500 italic">Tidak ada detail bahan</span>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else if (log.note) {
+                 html = `<div class="p-4 bg-slate-800 rounded text-slate-300 text-sm">${log.note}</div>`;
+            } else {
+                 html = `<div class="p-4 bg-slate-800 rounded text-slate-300 text-sm">${log.desc}</div>`;
+            }
+            
+            content.innerHTML = html;
+            modal.classList.remove('hidden');
+        };
+
+        window.closeTransactionDetailModal = () => {
+            document.getElementById('transactionDetailModal').classList.add('hidden');
+        };
 
         window.renderHistoryTable = () => {
             const tbody = document.getElementById('hist-table-body');
@@ -1302,6 +2114,12 @@
                 if(h.type === 'CRAFTING') color = 'text-blue-400';
                 if(h.type === 'WAREHOUSE') color = 'text-orange-400';
 
+                // Check if details exist to show view button
+                const showDetail = (h.details && h.details.length > 0) || h.note;
+                const viewBtn = showDetail ? 
+                    `<button onclick="viewLogDetails('${h.id}')" class="text-blue-400 hover:text-white mr-2" title="Lihat Detail"><i class="fas fa-eye"></i></button>` : 
+                    `<span class="text-slate-700 mr-2"><i class="fas fa-eye-slash"></i></span>`;
+
                 return `
                 <tr class="border-b border-slate-800 text-xs hover:bg-slate-800/30">
                     <td class="p-3 text-slate-500">${h.timestamp ? new Date(h.timestamp.seconds*1000).toLocaleString() : '-'}</td>
@@ -1309,6 +2127,10 @@
                     <td class="p-3 text-slate-300">${h.desc}</td>
                     <td class="p-3 text-right font-mono">${h.amount && h.type === 'SALES' ? 'Rp '+h.amount.toLocaleString() : '-'}</td>
                     <td class="p-3 text-slate-500">${h.pic || '-'}</td>
+                    <td class="p-3 text-center">
+                        ${viewBtn}
+                        <button onclick="deleteGlobalLog('${h.id}')" class="text-rose-400 hover:text-white" title="Hapus"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>`;
             }).join('');
         };
@@ -1385,6 +2207,9 @@
                         <p class="text-slate-400">Kelola stok bahan mentah untuk keperluan produksi.</p>
                     </div>
                     <div class="flex gap-3">
+                         <button onclick="openPriceModal()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                            <i class="fas fa-tags mr-2"></i> Harga Bahan
+                         </button>
                          <button onclick="document.getElementById('wh-import-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-file-excel mr-2"></i> Import Excel
                          </button>
@@ -1421,9 +2246,14 @@
                                 <h3 class="text-lg font-bold text-white flex items-center">
                                     <span><i class="fas fa-boxes mr-2 text-slate-500"></i>Stok Saat Ini</span>
                                 </h3>
-                                <div class="relative w-64">
-                                    <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
-                                    <input type="text" id="wh-list-search" onkeyup="renderWarehouseTable()" placeholder="Cari barang..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-blue-500 outline-none">
+                                <div class="flex gap-2">
+                                    <button id="btn-stock-screenshot" onclick="downloadStockScreenshot()" class="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Stok">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                    <div class="relative w-64">
+                                        <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                                        <input type="text" id="wh-list-search" onkeyup="renderWarehouseTable()" placeholder="Cari barang..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-blue-500 outline-none">
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1481,69 +2311,117 @@
             </section>
 
             <!-- 2. CRAFTING VIEW -->
-            <section id="crafting" class="page-section max-w-6xl mx-auto">
-                <header class="mb-8 flex justify-between items-center">
+            <section id="crafting" class="page-section max-w-7xl mx-auto">
+                <!-- NEW HEADER WITH STOCK PREVIEW -->
+                <div class="mb-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase flex items-center">
+                            <i class="fas fa-cubes mr-2"></i>Stok Bahan Saat Ini (Preview)
+                        </h4>
+                        <button id="btn-preview-screenshot" onclick="downloadPreviewScreenshot()" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Preview">
+                            <i class="fas fa-camera text-[10px]"></i>
+                        </button>
+                    </div>
+                    <div id="material-stock-preview" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+                        <!-- Injected via JS -->
+                        <span class="text-slate-500 text-xs italic">Memuat stok...</span>
+                    </div>
+                </div>
+
+                <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h2 class="text-3xl font-bold text-white mb-2">Pabrik Perakitan</h2>
                         <p class="text-slate-400">Ubah bahan mentah menjadi produk senjata siap jual.</p>
                     </div>
-                    <div>
-                         <button onclick="document.getElementById('recipe-import-input').click()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                    <div class="flex flex-wrap gap-2">
+                         <!-- Tombol Daftar Resep Dipindahkan ke Sini -->
+                         <button onclick="openRecipeListModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                            <i class="fas fa-clipboard-list mr-2"></i> Daftar Resep
+                         </button>
+                         <button onclick="openRecipeModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                            <i class="fas fa-plus-circle mr-2"></i> Buat Resep Baru
+                         </button>
+                         <button onclick="document.getElementById('recipe-import-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-file-excel mr-2"></i> Import Resep (Excel)
                          </button>
                          <input type="file" id="recipe-import-input" accept=".xlsx, .xls" class="hidden" onchange="importRecipeExcel(this)">
+                         
+                         <!-- NEW CRAFTING HISTORY BUTTON -->
+                         <button onclick="openCraftingHistory()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                            <i class="fas fa-history mr-2"></i> Riwayat Produksi
+                         </button>
                     </div>
                 </header>
 
-                <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                    <div class="xl:col-span-4 space-y-6">
-                        <div class="glass-panel p-6 rounded-xl border-t-4 border-purple-500">
-                            <h3 class="text-lg font-bold text-purple-400 mb-4"><i class="fas fa-scroll mr-2"></i>Buat Resep Baru</h3>
-                            <form id="cr-form" onsubmit="saveRecipe(event)" class="space-y-4">
-                                <input type="text" id="cr-name" placeholder="NAMA PRODUK (CONTOH: AK-47)" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white font-bold uppercase outline-none focus:border-purple-500">
-                                <div class="bg-slate-900/50 p-3 rounded border border-slate-800">
-                                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Komposisi Bahan (Dari Gudang)</p>
-                                    <div id="cr-inputs" class="grid grid-cols-2 gap-2"></div>
-                                </div>
-                                <button class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded transition">SIMPAN RESEP</button>
-                            </form>
-                        </div>
-                        
-                        <div class="glass-panel p-6 rounded-xl flex flex-col h-[600px]">
-                            <h3 class="text-sm font-bold text-slate-400 mb-4 flex items-center">
-                                <i class="fas fa-clipboard-list mr-2 text-purple-500"></i>Daftar Resep Aktif
-                            </h3>
-                            <div id="cr-recipe-list" class="space-y-3 overflow-y-auto custom-scrollbar pr-1 flex-1">
-                                <!-- Cards injected via JS -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- RIGHT COLUMN: PRODUCTION PANEL -->
+                    <div class="lg:col-span-12">
+                        <div class="glass-panel p-8 rounded-xl border-t-4 border-emerald-500 h-full flex flex-col relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                            
+                            <div class="text-center mb-6">
+                                <i class="fas fa-industry text-6xl text-slate-700 mb-2"></i>
+                                <h2 class="text-2xl font-bold text-white">Produksi Massal</h2>
+                                <p class="text-xs text-slate-400">Tambahkan beberapa item ke antrean untuk dirakit sekaligus.</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="xl:col-span-8">
-                        <div class="glass-panel p-8 rounded-xl border-t-4 border-emerald-500 h-full flex flex-col justify-center items-center text-center relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
                             
-                            <i class="fas fa-industry text-6xl text-slate-700 mb-6"></i>
-                            <h2 class="text-2xl font-bold text-white mb-6">Produksi Massal</h2>
-                            
-                            <div class="w-full max-w-md space-y-4 relative z-10">
-                                <div class="text-left">
-                                    <label class="text-xs font-bold text-slate-500 uppercase">1. Pilih Produk</label>
-                                    <select id="cr-select-product" onchange="calculateCraft()" class="w-full bg-slate-800 border border-slate-700 rounded p-3 text-white font-bold mt-1 outline-none focus:border-emerald-500"></select>
-                                </div>
-                                <div class="text-left">
-                                    <label class="text-xs font-bold text-slate-500 uppercase">2. Jumlah Produksi</label>
-                                    <input type="number" id="cr-qty" value="1" min="1" oninput="calculateCraft()" class="w-full bg-slate-800 border border-slate-700 rounded p-3 text-white font-bold mt-1 outline-none focus:border-emerald-500">
-                                </div>
-                                
-                                <div class="bg-slate-900 p-4 rounded text-left border border-slate-800">
-                                    <p class="text-xs font-bold text-slate-500 uppercase border-b border-slate-800 pb-1 mb-1">Status Ketersediaan Bahan</p>
-                                    <div id="cr-calc-detail" class="text-slate-400 text-sm italic">Pilih produk dulu...</div>
+                            <!-- Split Panel for Queue System -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 flex-1 min-h-0">
+                                <!-- INPUT SECTION -->
+                                <div class="flex flex-col space-y-4">
+                                    <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 h-full">
+                                        <h4 class="text-sm font-bold text-emerald-400 mb-4 border-b border-slate-700 pb-2">1. Pilih Produk & Jumlah</h4>
+                                        
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Produk</label>
+                                                <select id="cr-select-product" class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm"></select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jumlah Unit</label>
+                                                <input type="number" id="cr-qty" value="1" min="1" class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm text-center">
+                                            </div>
+                                            <button onclick="addToCraftQueue()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg mt-2 flex items-center justify-center">
+                                                <i class="fas fa-plus mr-2"></i> Tambahkan ke List
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <button id="btn-craft" onclick="doCraft()" disabled class="w-full bg-slate-700 text-slate-500 font-bold p-3 rounded cursor-not-allowed">
-                                    MENUNGGU INPUT
-                                </button>
+                                <!-- QUEUE & SUMMARY SECTION -->
+                                <div class="flex flex-col h-full space-y-4">
+                                    <!-- Queue List -->
+                                    <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex-col min-h-0">
+                                        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                                            <h4 class="text-sm font-bold text-emerald-400">2. Antrean & Kebutuhan Per Item</h4>
+                                            <button onclick="resetCraftQueue()" class="text-[10px] text-rose-400 hover:text-white hover:bg-rose-500 px-2 py-0.5 rounded transition">Reset</button>
+                                        </div>
+                                        <!-- List now accommodates detailed cards -->
+                                        <div id="cr-queue-list" class="flex-1 space-y-2 mb-6">
+                                            <div class="text-center text-slate-500 text-xs italic py-4">Antrean kosong.</div>
+                                        </div>
+
+                                        <!-- Resource Summary (Full, No Scroll) -->
+                                        <div id="total-estimation-wrapper" class="bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h4 class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                                    <i class="fas fa-calculator"></i> Total Estimasi Bahan
+                                                </h4>
+                                                <button onclick="takeElementScreenshot('total-estimation-wrapper', 'Estimasi_Total_Produksi')" class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition" title="Screenshot Total">
+                                                    <i class="fas fa-camera text-xs"></i>
+                                                </button>
+                                            </div>
+                                            <!-- Removed max-h classes to show full list -->
+                                            <div id="cr-queue-summary" class="text-xs text-slate-400">
+                                                <div class="text-center italic">Belum ada estimasi.</div>
+                                            </div>
+                                        </div>
+
+                                        <button id="btn-process-queue" onclick="processCraftQueue()" disabled class="w-full bg-slate-700 text-slate-500 font-bold p-3 rounded cursor-not-allowed transition shadow-lg mt-4">
+                                            ANTREAN KOSONG
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1608,6 +2486,7 @@
                                 <th class="p-4">Aktivitas</th>
                                 <th class="p-4 text-right">Nilai (Rp)</th>
                                 <th class="p-4">PIC</th>
+                                <th class="p-4 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="hist-table-body"></tbody>
@@ -1650,6 +2529,148 @@
             <div class="flex gap-3 mt-6">
                 <button onclick="closeModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
                 <button id="btn-modal-confirm" onclick="confirmModalAction()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW RECIPE CREATION MODAL -->
+    <div id="recipeModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale relative">
+            <button onclick="closeRecipeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fas fa-times"></i></button>
+            
+            <h3 id="recipeModalTitle" class="text-xl font-bold text-purple-400 mb-6 flex items-center"><i class="fas fa-scroll mr-3"></i>Buat Resep Baru</h3>
+            
+            <form id="cr-form" onsubmit="saveRecipe(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Produk</label>
+                    <input type="text" id="cr-name" placeholder="CONTOH: AK-47" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white font-bold uppercase outline-none focus:border-purple-500 transition">
+                </div>
+                
+                <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-3 flex justify-between">
+                        <span>Komposisi Bahan</span>
+                        <span class="text-slate-600 italic">(Isi jumlah yang dibutuhkan)</span>
+                    </p>
+                    <div id="cr-inputs" class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                        <!-- Inputs injected via JS -->
+                    </div>
+                </div>
+                
+                <button class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-purple-900/20">
+                    SIMPAN RESEP
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- NEW RECIPE LIST MODAL -->
+    <div id="recipeListModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-purple-400 flex items-center">
+                    <i class="fas fa-clipboard-list mr-3"></i>Daftar Resep Aktif
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadRecipeScreenshot()" class="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Resep" id="btn-recipe-screenshot">
+                        <i class="fas fa-camera text-xs"></i>
+                    </button>
+                    <button onclick="closeRecipeListModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                </div>
+            </div>
+            
+            <div id="recipeListModalContent" class="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min">
+                <!-- Cards injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW CRAFTING HISTORY MODAL -->
+    <div id="craftingHistoryModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[85vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-cyan-400 flex items-center">
+                    <i class="fas fa-history mr-3"></i>Riwayat Produksi
+                </h3>
+                <button onclick="closeCraftingHistory()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div id="craftingHistoryContent" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                <div class="text-center text-slate-500 text-sm py-10 italic">Memuat riwayat...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NEW TRANSACTION DETAIL MODAL -->
+    <div id="transactionDetailModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-600 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                <h3 id="td-title" class="text-lg font-bold text-white">Detail Transaksi</h3>
+                <button onclick="closeTransactionDetailModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="td-content" class="flex-1 overflow-y-auto custom-scrollbar"></div>
+        </div>
+    </div>
+
+    <!-- NEW PRICE LIST MODAL -->
+    <div id="priceModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-yellow-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale relative flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-yellow-500 flex items-center">
+                    <i class="fas fa-tags mr-3"></i>Harga Modal Bahan
+                </h3>
+                <button onclick="closePriceModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="flex gap-2 mb-4">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                    <input type="text" id="price-search" onkeyup="renderPriceListTable()" placeholder="Cari bahan..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-yellow-500 outline-none">
+                </div>
+                <button onclick="document.getElementById('price-import-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-bold text-xs shadow flex items-center">
+                    <i class="fas fa-file-upload mr-2"></i> Import Excel
+                </button>
+                <input type="file" id="price-import-input" accept=".xlsx, .xls" class="hidden" onchange="importPriceExcel(this)">
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
+                        <tr>
+                            <th class="p-3">Nama Bahan</th>
+                            <th class="p-3 text-right">Harga Modal</th>
+                            <th class="p-3 text-right">Stok Gudang</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="price-table-body" class="divide-y divide-slate-700/50">
+                        <!-- Content Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-800 text-center">
+                <p class="text-[10px] text-slate-500 italic">Format Excel: Kolom "Nama Bahan" & "Harga Modal"</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW EDIT PRICE MODAL -->
+    <div id="editPriceModal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 modal-scale">
+            <h3 class="text-lg font-bold text-white mb-4">Edit Harga Bahan</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Nama Bahan</label>
+                    <input type="text" id="edit-price-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-400 text-sm font-bold" readonly>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Harga Modal Baru (Rp)</label>
+                    <input type="number" id="edit-price-value" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeEditPriceModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                <button onclick="savePriceUpdate()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
             </div>
         </div>
     </div>
