@@ -22,6 +22,10 @@
         .page-section { display: none; animation: fadeIn 0.3s ease-out; }
         .page-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Modal Scale Animation */
+        .modal-scale { animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modalScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         .receipt-pattern {
             background-color: #ffffff;
@@ -31,20 +35,16 @@
     </style>
 
     <script type="module">
-        // Gunakan import yang kompatibel untuk kedua environment
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- KONFIGURASI FIREBASE (HYBRID) ---
-        // 1. Jika di Canvas, gunakan __firebase_config otomatis
-        // 2. Jika di Vercel/Hosting sendiri, isi data di bagian 'else'
         let firebaseConfig;
         if (typeof __firebase_config !== 'undefined') {
             firebaseConfig = JSON.parse(__firebase_config);
         } else {
             // [AREA EDIT UNTUK DEPLOY VERCEL]
-            // Isi data ini dari Firebase Console Anda saat mau deploy
             firebaseConfig = {
                 apiKey: "AIzaSyDh0E43GugWo4_M6qYwtu9GKJFN9Vm6UAE",
                 authDomain: "vk-super-app.firebaseapp.com",
@@ -69,19 +69,17 @@
         let currentAction = null; 
         let currentTargetItem = null;
         let currentReportElement = null;
+        let currentConfirmCallback = null; // For Custom Alert
 
         // --- INISIALISASI ---
         const initApp = async () => {
             try {
-                // Tentukan App ID (Otomatis atau Manual)
                 appId = typeof __app_id !== 'undefined' ? __app_id : 'vikrama-erp-production';
                 
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Auth Logic Hybrid
-                // Jika ada token canvas, pakai token. Jika tidak (di Vercel), pakai Anonymous.
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -98,15 +96,13 @@
             } catch (err) {
                 console.error("Init Error", err);
                 document.getElementById('connection-status').innerHTML = '<span class="text-rose-500">Offline (Check Config)</span>';
-                // Jangan alert di preview canvas agar tidak mengganggu, tapi log error
                 if(!firebaseConfig.apiKey.includes("ISI_API_KEY")) {
-                     alert("Gagal koneksi Firebase: " + err.message);
+                     showAlert("Koneksi Gagal", "Gagal menghubungkan ke Firebase: " + err.message, "error");
                 }
             }
         };
 
         function startRealtimeListeners() {
-            // Path Database
             onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), (snap) => {
                 if(snap.exists()) {
                     warehouseStock = snap.data();
@@ -146,17 +142,119 @@
             });
         }
 
+        // --- CUSTOM ALERT SYSTEM ---
+        window.showAlert = (title, message, type = 'info') => {
+            const modal = document.getElementById('custom-alert-modal');
+            const iconWrapper = document.getElementById('alert-icon-wrapper');
+            const icon = document.getElementById('alert-icon');
+            const titleEl = document.getElementById('alert-title');
+            const msgEl = document.getElementById('alert-message');
+            const actions = document.getElementById('alert-actions');
+
+            titleEl.textContent = title;
+            msgEl.innerHTML = message;
+            actions.innerHTML = ''; // Clear buttons
+
+            // Icon & Style Logic
+            iconWrapper.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto';
+            if (type === 'success') {
+                iconWrapper.classList.add('bg-emerald-500/20', 'text-emerald-500');
+                icon.className = 'fas fa-check text-3xl';
+            } else if (type === 'error') {
+                iconWrapper.classList.add('bg-rose-500/20', 'text-rose-500');
+                icon.className = 'fas fa-times text-3xl';
+            } else if (type === 'warning') {
+                iconWrapper.classList.add('bg-yellow-500/20', 'text-yellow-500');
+                icon.className = 'fas fa-exclamation-triangle text-3xl';
+            } else {
+                iconWrapper.classList.add('bg-blue-500/20', 'text-blue-500');
+                icon.className = 'fas fa-info text-3xl';
+            }
+
+            // OK Button
+            const btn = document.createElement('button');
+            btn.className = 'w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition shadow-lg';
+            btn.textContent = 'OK';
+            btn.onclick = closeAlert;
+            actions.appendChild(btn);
+
+            modal.classList.remove('hidden');
+        };
+
+        window.showConfirm = (title, message, callback, type = 'warning') => {
+            const modal = document.getElementById('custom-alert-modal');
+            const iconWrapper = document.getElementById('alert-icon-wrapper');
+            const icon = document.getElementById('alert-icon');
+            const titleEl = document.getElementById('alert-title');
+            const msgEl = document.getElementById('alert-message');
+            const actions = document.getElementById('alert-actions');
+
+            titleEl.textContent = title;
+            msgEl.innerHTML = message;
+            actions.innerHTML = '';
+            currentConfirmCallback = callback;
+
+            // Icon Style
+            iconWrapper.className = 'w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto';
+            if (type === 'danger') {
+                iconWrapper.classList.add('bg-rose-500/20', 'text-rose-500');
+                icon.className = 'fas fa-trash-alt text-3xl';
+            } else {
+                iconWrapper.classList.add('bg-yellow-500/20', 'text-yellow-500');
+                icon.className = 'fas fa-question text-3xl';
+            }
+
+            // Buttons
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'flex-1 py-2.5 border border-slate-600 text-slate-300 hover:bg-slate-800 rounded-lg font-bold transition mr-3';
+            btnCancel.textContent = 'Batal';
+            btnCancel.onclick = closeAlert;
+
+            const btnConfirm = document.createElement('button');
+            const colorClass = type === 'danger' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-blue-600 hover:bg-blue-500';
+            btnConfirm.className = `flex-1 py-2.5 ${colorClass} text-white rounded-lg font-bold transition shadow-lg`;
+            btnConfirm.textContent = 'Ya, Lanjutkan';
+            btnConfirm.onclick = () => {
+                if(currentConfirmCallback) currentConfirmCallback();
+                closeAlert();
+            };
+
+            actions.appendChild(btnCancel);
+            actions.appendChild(btnConfirm);
+
+            modal.classList.remove('hidden');
+        };
+
+        window.closeAlert = () => {
+            document.getElementById('custom-alert-modal').classList.add('hidden');
+            currentConfirmCallback = null;
+        };
+
         // --- FUNGSI-FUNGSI LOGIKA ---
         
         window.saveResource = async (e) => {
             e.preventDefault();
             const name = document.getElementById('wh-name').value.trim().toUpperCase();
             const qty = parseFloat(document.getElementById('wh-qty').value);
+            
             if(!name || isNaN(qty)) return;
+
             const currentQty = warehouseStock[name] || 0;
             const newStock = { ...warehouseStock, [name]: currentQty + qty };
+
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), newStock);
-            await addLog({ type: 'WAREHOUSE', subtype: 'DEPOSIT', itemName: name, desc: `Input Bahan Baru`, amount: qty, before: currentQty, after: currentQty + qty, pic: 'Admin', note: 'Setup Awal' });
+            await addLog({
+                type: 'WAREHOUSE',
+                subtype: 'DEPOSIT',
+                itemName: name,
+                desc: `Input Bahan Baru`,
+                amount: qty,
+                before: currentQty,
+                after: currentQty + qty,
+                pic: 'Admin',
+                note: 'Setup Awal'
+            });
+            
             document.getElementById('wh-form').reset();
             showToast(`Bahan ${name} berhasil diupdate!`);
         };
@@ -174,7 +272,10 @@
                     const sheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-                    if (jsonData.length === 0) return showToast("File Excel kosong!", "error");
+                    if (jsonData.length === 0) {
+                        showAlert("File Kosong", "File Excel tidak berisi data yang valid.", "warning");
+                        return;
+                    }
 
                     const newStock = { ...warehouseStock };
                     let logDetails = [];
@@ -203,11 +304,12 @@
                         amount: 0,
                         note: logDetails.join(', ')
                     });
-                    showToast(`Berhasil import ${logDetails.length} item!`);
+                    
+                    showAlert("Sukses", `Berhasil import <b>${logDetails.length}</b> item dari Excel!`, "success");
                     input.value = '';
                 } catch (err) {
                     console.error(err);
-                    showToast("Gagal membaca file Excel", "error");
+                    showAlert("Gagal Import", "Terjadi kesalahan saat membaca file Excel.", "error");
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -278,7 +380,7 @@
             const tbody = document.getElementById('bulkItemsBody');
             tbody.innerHTML = '';
             const items = Object.entries(warehouseStock).sort();
-            if(items.length === 0) return showToast("Gudang kosong.", "error");
+            if(items.length === 0) return showAlert("Gudang Kosong", "Tidak ada item untuk diupdate.", "warning");
 
             items.forEach(([name, qty]) => {
                 tbody.innerHTML += `
@@ -300,7 +402,6 @@
                 `;
             });
             
-            // Reset File Input & Indicator
             document.getElementById('bulkImage').value = '';
             document.getElementById('file-status-indicator').classList.add('hidden');
             
@@ -316,7 +417,6 @@
             });
         };
         
-        // --- ADD FILE INDICATOR LISTENER ---
         window.handleFileSelect = (input) => {
             const indicator = document.getElementById('file-status-indicator');
             const fileNameSpan = document.getElementById('file-name-display');
@@ -351,7 +451,7 @@
 
                     if(type === 'WITHDRAW') {
                         if(amount > currentStock) {
-                            showToast(`Stok ${name} tidak cukup!`, 'error');
+                            showAlert("Stok Kurang", `Stok <b>${name}</b> tidak cukup untuk dikurangi ${amount}.`, "error");
                             input.focus();
                             return;
                         }
@@ -368,7 +468,7 @@
                 }
             }
 
-            if(updates.length === 0) return showToast("Tidak ada data yang diisi.", "error");
+            if(updates.length === 0) return showAlert("Data Kosong", "Tidak ada item yang diisi jumlahnya.", "warning");
 
             const btn = document.getElementById('btnBulkConfirm');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...';
@@ -395,21 +495,58 @@
                     details: updates
                 });
 
-                showToast(`Berhasil update ${updates.length} item!`);
+                showAlert("Sukses", `Berhasil update <b>${updates.length}</b> item secara massal!`, "success");
                 document.getElementById('bulkUpdateModal').classList.add('hidden');
                 document.getElementById('bulkPIC').value = '';
                 document.getElementById('bulkDesc').value = '';
                 document.getElementById('bulkSearchInput').value = '';
-                document.getElementById('bulkImage').value = ''; // Reset file input
-                document.getElementById('file-status-indicator').classList.add('hidden'); // Reset indicator
+                document.getElementById('bulkImage').value = '';
+                document.getElementById('file-status-indicator').classList.add('hidden');
 
             } catch(err) {
                 console.error(err);
-                showToast("Gagal update massal: " + err.message, "error");
+                showAlert("Error", "Gagal melakukan update massal: " + err.message, "error");
             } finally {
                 btn.innerHTML = 'Proses Semua';
                 btn.disabled = false;
             }
+        };
+
+        // --- NEW FEATURE: DELETE ALL HISTORY ---
+        window.deleteAllHistory = () => {
+            if (warehouseSpecificHistory.length === 0) {
+                return showAlert("Info", "Riwayat transaksi sudah kosong.", "info");
+            }
+
+            showConfirm(
+                "Hapus Semua Riwayat?", 
+                "Apakah Anda yakin ingin menghapus <b>SEMUA</b> catatan riwayat transaksi gudang? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Tindakan ini permanen dan TIDAK akan mengubah stok barang saat ini.</span>",
+                async () => {
+                    const btn = document.getElementById('btn-delete-all-hist');
+                    if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    
+                    try {
+                        // 1. Get all warehouse logs
+                        const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), where('type', '==', 'WAREHOUSE'));
+                        const snapshot = await getDocs(q);
+                        
+                        // 2. Batch Delete
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach((doc) => {
+                            batch.delete(doc.ref);
+                        });
+
+                        await batch.commit();
+                        showAlert("Berhasil", "Semua riwayat transaksi gudang telah dihapus.", "success");
+                    } catch (err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal menghapus riwayat: " + err.message, "error");
+                    } finally {
+                         if(btn) btn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i> Hapus Semua';
+                    }
+                },
+                "danger"
+            );
         };
 
         // --- HISTORY & RECEIPT ---
@@ -554,7 +691,7 @@
                 link.href = canvas.toDataURL();
                 link.click();
                 showToast("Laporan berhasil diunduh!", "success");
-            }).catch(err => { console.error(err); showToast("Gagal Download: " + err.message, "error"); }).finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
+            }).catch(err => { console.error(err); showAlert("Gagal Download", err.message, "error"); }).finally(() => { btn.innerHTML = originalText; btn.disabled = false; });
         });
 
         window.closeReportModal = () => document.getElementById('reportModal').classList.add('hidden');
@@ -562,24 +699,39 @@
         window.rollbackLog = async (logId) => {
             const log = warehouseSpecificHistory.find(l => l.id === logId);
             if(!log) return;
-            if(!confirm(`Hapus transaksi ini? \n\nPERINGATAN: Stok '${log.itemName}' akan dikembalikan (Rollback).`)) return;
-            try {
-                const currentItemStock = warehouseStock[log.itemName] || 0;
-                let revertedStock = currentItemStock;
-                if (log.subtype === 'DEPOSIT') revertedStock -= log.amount;
-                else if (log.subtype === 'WITHDRAW') revertedStock += log.amount;
-                else if (log.subtype === 'BATCH' && log.details) {
-                    if(!confirm("Ini adalah Batch Update. Hapus log akan menghapus catatan, tapi stok TIDAK otomatis kembali untuk semua item dalam batch ini (Manual adjustment needed). Lanjutkan?")) return;
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
-                    showToast("Log Batch dihapus.");
-                    return;
-                }
-                if (revertedStock < 0) revertedStock = 0;
-                const updated = { ...warehouseStock, [log.itemName]: revertedStock };
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
-                showToast("Transaksi dihapus & stok dikembalikan.");
-            } catch (err) { console.error(err); showToast("Gagal rollback", "error"); }
+
+            showConfirm(
+                "Hapus & Rollback?", 
+                `Apakah Anda yakin ingin menghapus transaksi ini? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Stok '${log.itemName}' akan dikembalikan (Rollback).</span>`,
+                async () => {
+                     try {
+                        const currentItemStock = warehouseStock[log.itemName] || 0;
+                        let revertedStock = currentItemStock;
+
+                        if (log.subtype === 'DEPOSIT') {
+                            revertedStock -= log.amount; 
+                        } else if (log.subtype === 'WITHDRAW') {
+                            revertedStock += log.amount;
+                        } else if (log.subtype === 'BATCH') {
+                             showAlert("Perhatian", "Hapus log batch hanya menghapus catatan. Stok tidak dikembalikan otomatis untuk batch.", "warning");
+                             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
+                             return;
+                        }
+
+                        if (revertedStock < 0) revertedStock = 0;
+
+                        const updated = { ...warehouseStock, [log.itemName]: revertedStock };
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId));
+
+                        showAlert("Berhasil", "Transaksi dihapus & stok dikembalikan.", "success");
+                    } catch (err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal rollback: " + err.message, "error");
+                    }
+                },
+                "danger"
+            );
         };
 
         window.showImagePreview = (src) => { document.getElementById('preview-img-content').src = src; document.getElementById('image-preview-modal').classList.remove('hidden'); };
@@ -694,18 +846,22 @@
                 if (imgInput.files[0]) imgData = await compressImage(imgInput.files[0]);
 
                 if (currentAction === 'DELETE') {
-                    const updated = { ...warehouseStock };
-                    delete updated[name];
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
-                    await addLog({ type: 'WAREHOUSE', subtype: 'DELETE', itemName: name, desc: `Hapus Bahan`, amount: 0, before: currentQty, after: 0, pic: 'Admin' });
-                    showToast(`Item ${name} dihapus.`);
+                    showConfirm("Konfirmasi Hapus", `Yakin ingin menghapus <b>${name}</b> permanen?`, async () => {
+                         const updated = { ...warehouseStock };
+                        delete updated[name];
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
+                        await addLog({ type: 'WAREHOUSE', subtype: 'DELETE', itemName: name, desc: `Hapus Bahan`, amount: 0, before: currentQty, after: 0, pic: 'Admin' });
+                        showAlert("Sukses", `Item ${name} berhasil dihapus.`, "success");
+                        closeModal();
+                    }, "danger");
                 } 
                 else if (currentAction === 'DP') {
                     if (isNaN(qtyVal) || qtyVal <= 0) throw new Error("Jumlah harus > 0");
                     const newStock = { ...warehouseStock, [name]: currentQty + qtyVal };
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), newStock);
                     await addLog({ type: 'WAREHOUSE', subtype: 'DEPOSIT', itemName: name, desc: `Deposit Manual`, amount: qtyVal, before: currentQty, after: currentQty + qtyVal, pic: picVal, note: noteVal, image: imgData });
-                    showToast("Stok ditambahkan.");
+                    showAlert("Sukses", "Stok berhasil ditambahkan.", "success");
+                    closeModal();
                 } 
                 else if (currentAction === 'WD') {
                     if (isNaN(qtyVal) || qtyVal <= 0) throw new Error("Jumlah harus > 0");
@@ -713,7 +869,8 @@
                     const newStock = { ...warehouseStock, [name]: currentQty - qtyVal };
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), newStock);
                     await addLog({ type: 'WAREHOUSE', subtype: 'WITHDRAW', itemName: name, desc: `Withdraw Manual`, amount: qtyVal, before: currentQty, after: currentQty - qtyVal, pic: picVal, note: noteVal, image: imgData });
-                    showToast("Stok dikurangi.");
+                    showAlert("Sukses", "Stok berhasil dikurangi.", "success");
+                    closeModal();
                 }
                 else if (currentAction === 'EDIT') {
                     if (!inputNameVal) throw new Error("Nama tidak boleh kosong");
@@ -723,11 +880,11 @@
                     updated[inputNameVal] = qtyVal;
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock'), updated);
                     await addLog({ type: 'WAREHOUSE', subtype: 'EDIT', itemName: inputNameVal, desc: `Opname Stok`, amount: 0, before: currentQty, after: qtyVal, pic: 'Admin' });
-                    showToast("Data diperbarui.");
+                    showAlert("Sukses", "Data resource berhasil diperbarui.", "success");
+                    closeModal();
                 }
-                closeModal();
             } catch (err) {
-                showToast(err.message, "error");
+                showAlert("Error", err.message, "error");
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -764,14 +921,14 @@
                 if(val > 0) requirements[input.dataset.material] = val;
             });
 
-            if(Object.keys(requirements).length === 0) return showToast("Pilih minimal 1 bahan!", "error");
+            if(Object.keys(requirements).length === 0) return showAlert("Validasi", "Pilih minimal 1 bahan!", "warning");
 
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name), {
                 requirements,
                 sellingPrice: sellPrice
             });
             document.getElementById('cr-form').reset();
-            showToast(`Resep ${name} disimpan.`);
+            showAlert("Sukses", `Resep ${name} berhasil disimpan.`, "success");
         };
 
         window.renderRecipeTable = () => {
@@ -791,9 +948,10 @@
         };
 
         window.deleteRecipe = async (name) => {
-            if(confirm('Hapus resep ini?')) {
+            showConfirm("Hapus Resep?", "Yakin hapus resep ini?", async () => {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name));
-            }
+                showAlert("Sukses", "Resep dihapus.", "success");
+            }, "danger");
         };
 
         window.renderProductDropdown = () => {
@@ -868,7 +1026,7 @@
             });
 
             await batch.commit();
-            showToast(`Berhasil merakit ${qty}x ${prod}! Stok Gudang berkurang, Stok Toko bertambah.`);
+            showAlert("Produksi Sukses", `Berhasil merakit ${qty}x ${prod}! Stok Gudang berkurang, Stok Toko bertambah.`, "success");
             window.calculateCraft();
         };
 
@@ -948,36 +1106,36 @@
             if(cart.length === 0) return;
             const pic = document.getElementById('pos-pic').value || 'Kasir';
             
-            if(!confirm('Proses Transaksi? Stok akan berkurang.')) return;
+            showConfirm('Proses Transaksi?', 'Apakah Anda yakin ingin memproses transaksi ini? Stok akan berkurang.', async () => {
+                const batch = writeBatch(db);
+                let totalSales = 0;
+                const descItems = [];
 
-            const batch = writeBatch(db);
-            let totalSales = 0;
-            const descItems = [];
+                cart.forEach(item => {
+                    const prod = productStock.find(p => p.id === item.id);
+                    const remaining = prod.stock - item.qty;
+                    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.id);
+                    batch.update(ref, { stock: remaining });
+                    
+                    totalSales += (item.qty * item.sellingPrice);
+                    descItems.push(`${item.name} (${item.qty})`);
+                });
 
-            cart.forEach(item => {
-                const prod = productStock.find(p => p.id === item.id);
-                const remaining = prod.stock - item.qty;
-                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.id);
-                batch.update(ref, { stock: remaining });
-                
-                totalSales += (item.qty * item.sellingPrice);
-                descItems.push(`${item.name} (${item.qty})`);
-            });
+                const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
+                batch.set(logRef, {
+                    type: 'SALES',
+                    desc: `Penjualan: ${descItems.join(', ')}`,
+                    amount: totalSales,
+                    pic: pic,
+                    timestamp: serverTimestamp()
+                });
 
-            const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
-            batch.set(logRef, {
-                type: 'SALES',
-                desc: `Penjualan: ${descItems.join(', ')}`,
-                amount: totalSales,
-                pic: pic,
-                timestamp: serverTimestamp()
-            });
-
-            await batch.commit();
-            cart = [];
-            renderCart();
-            document.getElementById('pos-pic').value = '';
-            showToast('Transaksi Berhasil!', 'success');
+                await batch.commit();
+                cart = [];
+                renderCart();
+                document.getElementById('pos-pic').value = '';
+                showAlert("Berhasil", 'Transaksi penjualan berhasil diproses!', 'success');
+            }, 'info');
         };
 
         // ==========================================
@@ -1020,7 +1178,7 @@
         function showToast(msg, type='success') {
             const t = document.getElementById('toast');
             t.innerHTML = msg;
-            t.className = `fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 z-50 ${type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`;
+            t.className = `fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 z-[110] ${type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`;
             t.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
@@ -1063,7 +1221,7 @@
         </nav>
 
         <div class="p-4 border-t border-slate-800 text-xs text-slate-600 text-center">
-            v4.6 Fix Update<br>
+            v4.7 Card Alert & Del All<br>
             &copy; 2025 Vikrama Kulapati
         </div>
     </aside>
@@ -1140,9 +1298,15 @@
 
                         <!-- TABEL RIWAYAT TRANSAKSI -->
                         <div class="glass-panel p-6 rounded-xl border-t-4 border-slate-700">
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center">
-                                <i class="fas fa-history mr-2 text-slate-500"></i>Riwayat Transaksi Gudang
-                            </h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-white flex items-center">
+                                    <i class="fas fa-history mr-2 text-slate-500"></i>Riwayat Transaksi Gudang
+                                </h3>
+                                <button id="btn-delete-all-hist" onclick="deleteAllHistory()" class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
+                                    <i class="fas fa-trash-alt mr-2"></i> Hapus Semua
+                                </button>
+                            </div>
+                            
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-sm whitespace-nowrap">
                                     <thead class="text-xs text-slate-500 uppercase bg-slate-800/50">
@@ -1405,6 +1569,22 @@
         </div>
     </div>
 
+    <!-- CUSTOM CARD ALERT (REPLACEMENT FOR DEFAULT ALERTS) -->
+    <div id="custom-alert-modal" class="fixed inset-0 z-[120] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full p-8 transform transition-all scale-100 modal-scale">
+            <div class="text-center">
+                <div id="alert-icon-wrapper" class="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto">
+                    <i id="alert-icon" class="text-3xl"></i>
+                </div>
+                <h3 id="alert-title" class="text-xl font-bold text-white mb-2 tracking-wide"></h3>
+                <p id="alert-message" class="text-slate-400 text-sm mb-8 leading-relaxed"></p>
+                <div id="alert-actions" class="flex gap-3 justify-center">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- IMAGE PREVIEW MODAL -->
     <div id="image-preview-modal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur flex items-center justify-center p-4" onclick="closeImagePreview()">
         <img id="preview-img-content" class="max-w-full max-h-screen rounded shadow-2xl" src="">
@@ -1519,7 +1699,7 @@
     </div>
     
     <!-- TOAST -->
-    <div id="toast" class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 translate-y-20 opacity-0 pointer-events-none z-50"></div>
+    <div id="toast" class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 translate-y-20 opacity-0 pointer-events-none z-[110]"></div>
 
 </body>
 </html>
