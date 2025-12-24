@@ -686,17 +686,16 @@
 
             showConfirm(
                 "Hapus Semua Riwayat?", 
-                "Apakah Anda yakin ingin menghapus <b>SEMUA</b> catatan riwayat transaksi gudang? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Tindakan ini permanen dan TIDAK akan mengubah stok barang saat ini.</span>",
+                "Apakah Anda yakin ingin menghapus <b>SEMUA</b> catatan riwayat transaksi gudang? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Stok barang TIDAK akan berubah (hanya hapus log).</span>",
                 async () => {
                     const btn = document.getElementById('btn-delete-all-hist');
+                    const originalText = btn ? btn.innerHTML : '';
                     if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     
                     try {
-                        // 1. Get all warehouse logs
                         const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
                         const snapshot = await getDocs(q);
                         
-                        // 2. Batch Delete with Pagination (Max 500 per batch)
                         const batch = writeBatch(db);
                         let count = 0;
                         
@@ -718,7 +717,7 @@
                         console.error(err);
                         showAlert("Error", "Gagal menghapus riwayat: " + err.message, "error");
                     } finally {
-                         if(btn) btn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i> Hapus Semua';
+                         if(btn) btn.innerHTML = originalText || '<i class="fas fa-trash-alt mr-2"></i> Hapus Semua';
                     }
                 },
                 "danger"
@@ -771,13 +770,12 @@
             if (!log) return;
 
             const originalTpl = document.getElementById('receiptTemplate');
+            // Clone dan siapkan template
             const tpl = originalTpl.cloneNode(true);
-            tpl.removeAttribute('id');
-            tpl.classList.remove('hidden');
-            tpl.style.width = "100%"; 
-            tpl.style.boxShadow = "none";
-
+            
+            // Populate Data SEBELUM menghapus ID agar mudah selector-nya
             const dateVal = log.timestamp ? new Date(log.timestamp.seconds*1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', year:'numeric', hour: '2-digit', minute:'2-digit'}) : '-';
+            
             tpl.querySelector('#recDate').textContent = dateVal;
             tpl.querySelector('#recPIC').textContent = log.pic || '-';
             tpl.querySelector('#recID').textContent = log.id.substring(0,8).toUpperCase();
@@ -789,8 +787,8 @@
             const recType = tpl.querySelector('#recType');
             const singleContainer = tpl.querySelector('#recSingleContainer');
             const batchContainer = tpl.querySelector('#recBatchContainer');
-
-            if (log.subtype === 'BATCH') {
+            
+             if (log.subtype === 'BATCH') {
                 recType.textContent = 'BATCH UPDATE';
                 recType.className = 'inline-block px-3 py-1 rounded border-2 font-bold border-purple-500 text-purple-800 bg-purple-50';
                 singleContainer.classList.add('hidden');
@@ -847,10 +845,105 @@
             const imgEl = tpl.querySelector('#receiptImg');
             if (log.image) { imgCont.classList.remove('hidden'); imgEl.src = log.image; } else { imgCont.classList.add('hidden'); }
 
+            // Tampilkan dan Bersihkan ID untuk menghindari konflik
+            tpl.classList.remove('hidden');
+            tpl.style.width = "100%"; 
+            tpl.style.boxShadow = "none";
+            
+            // Hapus ID dari elemen di dalam clone agar tidak duplikat di DOM
+            const allNodes = tpl.querySelectorAll('*');
+            allNodes.forEach(node => {
+                if(node.id) node.removeAttribute('id');
+            });
+            tpl.removeAttribute('id'); // Hapus ID container utama
+
             const container = document.getElementById('reportPreviewContainer');
-            container.innerHTML = ''; container.appendChild(tpl);
+            container.innerHTML = ''; 
+            container.appendChild(tpl);
+            
+            // Set global variable untuk fungsi download
             currentReportElement = tpl; 
             document.getElementById('reportModal').classList.remove('hidden');
+        };
+
+        // PERBAIKAN LISTENER DOWNLOAD SCREENSHOT
+        document.getElementById('btnDownloadReport').onclick = () => {
+            if(!currentReportElement) return;
+            const btn = document.getElementById('btnDownloadReport');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+            btn.disabled = true;
+            
+            html2canvas(currentReportElement, { 
+                scale: 2, 
+                backgroundColor: '#ffffff', 
+                useCORS: true, 
+                logging: false 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Struk_Transaksi_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast("Laporan berhasil diunduh!", "success");
+            }).catch(err => { 
+                console.error(err); 
+                showAlert("Gagal Download", err.message, "error"); 
+            }).finally(() => { 
+                btn.innerHTML = originalText; 
+                btn.disabled = false; 
+            });
+        };
+
+        window.closeReportModal = () => document.getElementById('reportModal').classList.add('hidden');
+
+        // PERBAIKAN FITUR DELETE / ROLLBACK
+        window.rollbackLog = async (logId) => {
+            const log = warehouseSpecificHistory.find(l => l.id === logId);
+            if(!log) return;
+
+            showConfirm(
+                "Hapus & Rollback?", 
+                `Apakah Anda yakin ingin menghapus transaksi ini? <br><br><span class='text-rose-500 font-bold'>PERINGATAN: Stok '${log.itemName}' akan dikembalikan (Rollback).</span>`,
+                async () => {
+                     try {
+                        const batch = writeBatch(db);
+                        const logRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_history', logId);
+                        
+                        // Hapus Log
+                        batch.delete(logRef);
+
+                        // Proses Rollback Stok jika bukan Batch
+                        if (log.subtype !== 'BATCH') {
+                            const currentItemStock = warehouseStock[log.itemName] || 0;
+                            let revertedStock = currentItemStock;
+
+                            if (log.subtype === 'DEPOSIT') {
+                                revertedStock -= log.amount; 
+                            } else if (log.subtype === 'WITHDRAW') {
+                                revertedStock += log.amount;
+                            }
+
+                            if (revertedStock < 0) revertedStock = 0;
+                            
+                            // Update Stok Utama
+                            // Kita update warehouseStock lokal dulu lalu kirim full object (cara sederhana app ini)
+                            const updatedStock = { ...warehouseStock, [log.itemName]: revertedStock };
+                            const stockRef = doc(db, 'artifacts', appId, 'public', 'data', 'warehouse_inventory', 'main_stock');
+                            batch.set(stockRef, updatedStock);
+                        } else {
+                            // Jika Batch, hanya hapus log (user diperingatkan)
+                            // Jika ingin implementasi rollback batch, perlu logic kompleks per item
+                        }
+
+                        await batch.commit();
+                        showAlert("Berhasil", "Transaksi dihapus & stok dikembalikan.", "success");
+                    } catch (err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal rollback: " + err.message, "error");
+                    }
+                },
+                "danger"
+            );
         };
 
         window.showImagePreview = (src) => { document.getElementById('preview-img-content').src = src; document.getElementById('image-preview-modal').classList.remove('hidden'); };
