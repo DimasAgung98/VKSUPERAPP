@@ -37,7 +37,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, deleteDoc, updateDoc, writeBatch, serverTimestamp, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- KONFIGURASI FIREBASE (HYBRID) ---
         let firebaseConfig;
@@ -527,17 +527,31 @@
                     
                     try {
                         // 1. Get all warehouse logs
-                        const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), where('type', '==', 'WAREHOUSE'));
+                        // Menggunakan path yang konsisten dengan addLog
+                        const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
+                        
+                        // Perbaikan: Ambil snapshot untuk filter secara manual atau pastikan data ada
                         const snapshot = await getDocs(q);
                         
-                        // 2. Batch Delete
+                        // 2. Batch Delete with Pagination (Max 500 per batch)
                         const batch = writeBatch(db);
+                        let count = 0;
+                        
                         snapshot.docs.forEach((doc) => {
-                            batch.delete(doc.ref);
+                            const data = doc.data();
+                            // Filter hanya tipe WAREHOUSE agar log crafting/pos aman (opsional, tergantung kebutuhan)
+                            if (data.type === 'WAREHOUSE') {
+                                batch.delete(doc.ref);
+                                count++;
+                            }
                         });
 
-                        await batch.commit();
-                        showAlert("Berhasil", "Semua riwayat transaksi gudang telah dihapus.", "success");
+                        if(count > 0) {
+                             await batch.commit();
+                             showAlert("Berhasil", `Berhasil menghapus <b>${count}</b> riwayat transaksi gudang.`, "success");
+                        } else {
+                             showAlert("Info", "Tidak ada riwayat gudang untuk dihapus.", "info");
+                        }
                     } catch (err) {
                         console.error(err);
                         showAlert("Error", "Gagal menghapus riwayat: " + err.message, "error");
@@ -1221,7 +1235,7 @@
         </nav>
 
         <div class="p-4 border-t border-slate-800 text-xs text-slate-600 text-center">
-            v4.7 Card Alert & Del All<br>
+            v4.8 Batch Delete History<br>
             &copy; 2025 Vikrama Kulapati
         </div>
     </aside>
