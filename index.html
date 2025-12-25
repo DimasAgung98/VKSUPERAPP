@@ -18,6 +18,14 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+        /* Filter Button Active State */
+.pos-filter-btn.active-filter { 
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    transform: scale(1.05);
+}
         
         .page-section { display: none; animation: fadeIn 0.3s ease-out; }
         .page-section.active { display: block; }
@@ -31,6 +39,15 @@
             background-color: #ffffff;
             background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
             background-size: 20px 20px;
+        }
+        /* Recipe Card Hover Effects */
+        .recipe-card-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .recipe-card:hover .recipe-card-actions {
+            opacity: 1;
         }
     </style>
 
@@ -67,12 +84,28 @@
         let recipes = {};
         let materialPrices = {}; 
         let craftQueue = []; // ANTRIAN CRAFTING
+        let weaponDatabase = []; // DATABASE SENJATA
         
         // --- MODAL STATE ---
         let currentAction = null; 
         let currentTargetItem = null;
         let currentReportElement = null;
         let currentConfirmCallback = null; // For Custom Alert
+
+        // POS FILTER STATE
+let posFilterClass = 'SEMUA';
+
+window.filterPosByClass = (className) => {
+    posFilterClass = className;
+    
+    // Update active button
+    document.querySelectorAll('.pos-filter-btn').forEach(btn => {
+        btn.classList.remove('active-filter');
+    });
+    event.target.classList.add('active-filter');
+    
+    renderPosGrid();
+};
 
         // --- INISIALISASI ---
         const initApp = async () => {
@@ -129,14 +162,20 @@
                 if(snap.exists()) materialPrices = snap.data();
                 else materialPrices = {};
                 renderPriceListTable();
+                // Refresh displays that depend on material prices
+                renderWeaponDatabase();
+                renderPosGrid();
             });
 
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'recipes'), (snap) => {
+           onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'recipes'), (snap) => {
                 const newRecipes = {};
                 snap.forEach(d => newRecipes[d.id] = d.data());
                 recipes = newRecipes;
                 renderRecipeTable();
                 renderProductDropdown();
+                // Refresh displays that depend on cost calculation
+                renderWeaponDatabase();
+                renderPosGrid();
             });
 
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), (snap) => {
@@ -159,6 +198,12 @@
                 
                 renderWarehouseSpecificHistory();
                 renderCraftingHistory(); // Update modal jika terbuka
+            });
+            
+            // Listener Weapon Database
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'weapon_database'), (snap) => {
+                weaponDatabase = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderWeaponDatabase();
             });
         }
 
@@ -1103,6 +1148,19 @@
             }
         };
 
+        // Helper: Calculate cost price from recipe
+        const calculateCostFromRecipe = (productName) => {
+            const recipe = recipes[productName];
+            if (!recipe || !recipe.requirements) return 0;
+            
+            let totalCost = 0;
+            Object.entries(recipe.requirements).forEach(([material, qty]) => {
+                const materialPrice = materialPrices[material] || 0;
+                totalCost += materialPrice * qty;
+            });
+            
+            return totalCost;
+        };
         // ==========================================
         // MODULE 2: CRAFTING (PERAKITAN)
         // ==========================================
@@ -1126,25 +1184,45 @@
 
         window.saveRecipe = async (e) => {
             e.preventDefault();
-            const name = document.getElementById('cr-name').value.trim().toUpperCase();
-            // const sellPrice = parseFloat(document.getElementById('cr-price').value) || 0; // Removed per request
+            const nameInput = document.getElementById('cr-name');
+            const name = nameInput.value.trim().toUpperCase();
+            const isEditing = nameInput.getAttribute('data-editing') === 'true';
+            const originalName = nameInput.getAttribute('data-original-name');
+            
             const sellPrice = 0; // Default to 0 since input is removed
             const inputs = document.querySelectorAll('.recipe-input');
             const requirements = {};
+            
             inputs.forEach(input => {
                 const val = parseFloat(input.value);
                 if(val > 0) requirements[input.dataset.material] = val;
             });
 
+            if(!name) return showAlert("Validasi", "Nama produk harus diisi!", "warning");
             if(Object.keys(requirements).length === 0) return showAlert("Validasi", "Pilih minimal 1 bahan!", "warning");
 
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name), {
-                requirements,
-                sellingPrice: sellPrice
-            });
-            document.getElementById('cr-form').reset();
-            showAlert("Sukses", `Resep ${name} berhasil disimpan.`, "success");
-            closeRecipeModal();
+            try {
+                // If editing and name changed, delete old recipe
+                if(isEditing && originalName && originalName !== name) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', originalName));
+                }
+                
+                // Save/update recipe
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name), {
+                    requirements,
+                    sellingPrice: sellPrice
+                });
+                
+                document.getElementById('cr-form').reset();
+                nameInput.removeAttribute('data-editing');
+                nameInput.removeAttribute('data-original-name');
+                
+                showAlert("Sukses", `Resep ${name} berhasil ${isEditing ? 'diupdate' : 'disimpan'}.`, "success");
+                closeRecipeModal();
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal menyimpan resep: " + err.message, "error");
+            }
         };
 
         window.renderRecipeTable = () => {
@@ -1172,16 +1250,16 @@
                     }).join('');
 
                     return `
-                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
+                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm recipe-card">
                             <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
                                 <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
                                     <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
                                 </h4>
-                                <div class="flex gap-1">
-                                    <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
+                                <div class="flex gap-1 recipe-card-actions">
+                                    <button onclick='editRecipe("${name}")' class="text-slate-600 hover:text-blue-400 transition p-1.5 rounded hover:bg-slate-700" title="Edit Resep">
                                         <i class="fas fa-edit text-xs"></i>
                                     </button>
-                                    <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
+                                    <button onclick='deleteRecipe("${name}")' class="text-slate-600 hover:text-rose-500 transition p-1.5 rounded hover:bg-slate-700" title="Hapus Resep">
                                         <i class="fas fa-trash-alt text-xs"></i>
                                     </button>
                                 </div>
@@ -1208,28 +1286,49 @@
             const rec = recipes[name];
             if (!rec) return;
 
-            // 1. Isi Nama Produk
-            const nameInput = document.getElementById('cr-name');
-            nameInput.value = name;
+            // Pastikan input bahan sudah dirender
+            renderCraftingInputs();
             
-            // 2. Reset semua input bahan
-            document.querySelectorAll('.recipe-input').forEach(inp => inp.value = '');
-            
-            // 3. Isi input bahan sesuai resep
-            Object.entries(rec.requirements).forEach(([mat, qty]) => {
-                const input = document.querySelector(`.recipe-input[data-material="${mat}"]`);
-                if(input) input.value = qty;
-            });
+            // Tunggu sebentar agar DOM sudah ready
+            setTimeout(() => {
+                // 1. Isi Nama Produk
+                const nameInput = document.getElementById('cr-name');
+                if(nameInput) {
+                    nameInput.value = name;
+                    // Make readonly to prevent rename confusion
+                    nameInput.setAttribute('data-editing', 'true');
+                    nameInput.setAttribute('data-original-name', name);
+                }
+                
+                // 2. Reset semua input bahan
+                document.querySelectorAll('.recipe-input').forEach(inp => inp.value = '');
+                
+                // 3. Isi input bahan sesuai resep
+                Object.entries(rec.requirements).forEach(([mat, qty]) => {
+                    const input = document.querySelector(`.recipe-input[data-material="${mat}"]`);
+                    if(input) input.value = qty;
+                });
 
-            // 4. Buka Modal
-            openRecipeModal("Edit Resep: " + name);
+                // 4. Buka Modal
+                openRecipeModal("Edit Resep: " + name);
+            }, 100);
         };
 
-        window.deleteRecipe = async (name) => {
-            showConfirm("Hapus Resep?", "Yakin hapus resep ini?", async () => {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name));
-                showAlert("Sukses", "Resep dihapus.", "success");
-            }, "danger");
+         window.deleteRecipe = async (name) => {
+            showConfirm(
+                "Hapus Resep?", 
+                `Yakin ingin menghapus resep <b>${name}</b>? Produk yang sudah dibuat tidak akan terhapus.`, 
+                async () => {
+                    try {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'recipes', name));
+                        showAlert("Sukses", `Resep ${name} berhasil dihapus.`, "success");
+                    } catch(err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal menghapus resep: " + err.message, "error");
+                    }
+                }, 
+                "danger"
+            );
         };
         
         // --- NEW FEATURE: IMPORT RECIPE FROM EXCEL ---
@@ -1532,16 +1631,27 @@
 
                         // Update Product Stock
                         const existingProd = productStock.find(p => p.name === item.name);
+                        
+                        // Find weapon data for pricing
+                        const weaponData = weaponDatabase.find(w => w.name === item.name);
+                        const sellingPrice = weaponData ? weaponData.sellingPrice : rec.sellingPrice;
+                        const weaponClass = weaponData ? weaponData.weaponClass : 'Senjata';
+                        
                         if(existingProd) {
                             const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', existingProd.id);
-                            batch.update(prodRef, { stock: (existingProd.stock || 0) + item.qty });
+                            batch.update(prodRef, { 
+                                stock: (existingProd.stock || 0) + item.qty,
+                                sellingPrice: sellingPrice,
+                                weaponClass: weaponClass
+                            });
                         } else {
                             const newProdRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'products'));
                             batch.set(newProdRef, {
                                 name: item.name,
-                                category: 'Senjata',
+                                category: weaponClass,
+                                weaponClass: weaponClass,
                                 stock: item.qty,
-                                sellingPrice: rec.sellingPrice,
+                                sellingPrice: sellingPrice,
                                 costPrice: 0
                             });
                         }
@@ -1963,6 +2073,14 @@
         window.closeRecipeModal = () => {
             document.getElementById('recipeModal').classList.add('hidden');
             document.getElementById('cr-form').reset();
+            
+            // Clear editing attributes
+            const nameInput = document.getElementById('cr-name');
+            if(nameInput) {
+                nameInput.removeAttribute('data-editing');
+                nameInput.removeAttribute('data-original-name');
+            }
+            
             // Reset title back to default
             setTimeout(() => document.getElementById('recipeModalTitle').textContent = "Buat Resep Baru", 300);
         };
@@ -1993,16 +2111,16 @@
                     }).join('');
 
                     return `
-                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm">
+                        <div class="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition group shadow-sm recipe-card">
                             <div class="flex justify-between items-start mb-3 pb-2 border-b border-slate-700">
                                 <h4 class="font-bold text-white text-sm uppercase tracking-wide flex items-center">
                                     <i class="fas fa-box-open text-purple-500 mr-2"></i> ${name}
                                 </h4>
-                                <div class="flex gap-1">
-                                    <button onclick="editRecipe('${name}')" class="text-slate-600 hover:text-blue-400 transition p-1 rounded hover:bg-slate-700" title="Edit Resep">
+                                <div class="flex gap-1 recipe-card-actions">
+                                    <button onclick='editRecipe("${name}")' class="text-slate-600 hover:text-blue-400 transition p-1.5 rounded hover:bg-slate-700" title="Edit Resep">
                                         <i class="fas fa-edit text-xs"></i>
                                     </button>
-                                    <button onclick="deleteRecipe('${name}')" class="text-slate-600 hover:text-rose-500 transition p-1 rounded hover:bg-slate-700" title="Hapus Resep">
+                                    <button onclick='deleteRecipe("${name}")' class="text-slate-600 hover:text-rose-500 transition p-1.5 rounded hover:bg-slate-700" title="Hapus Resep">
                                         <i class="fas fa-trash-alt text-xs"></i>
                                     </button>
                                 </div>
@@ -2033,30 +2151,453 @@
         window.calculateCraft = () => {}; // Dummy to prevent error if called
         window.doCraft = async () => {}; // Dummy
 
+        // --- NEW: PRODUCT CLASS MANAGER ---
+        window.openProductClassManager = () => {
+            renderProductClassTable();
+            document.getElementById('productClassModal').classList.remove('hidden');
+        };
+
+        window.closeProductClassModal = () => {
+            document.getElementById('productClassModal').classList.add('hidden');
+        };
+
+        window.renderProductClassTable = () => {
+            const tbody = document.getElementById('product-class-table-body');
+            const searchInput = document.getElementById('product-class-search');
+            const filter = searchInput ? searchInput.value.toUpperCase() : '';
+            
+            if(!tbody) return;
+            
+            if(productStock.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-slate-500 italic">Belum ada produk. Lakukan Crafting terlebih dahulu.</td></tr>';
+                return;
+            }
+            
+            const filtered = productStock.filter(p => p.name.toUpperCase().includes(filter));
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500 italic">Tidak ada produk yang cocok.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filtered.map(w => {
+                const wClass = w.weaponClass || 'Umum';
+                let badgeColor = 'bg-slate-700 text-slate-300';
+                
+                if(wClass === 'KELAS 1') badgeColor = 'bg-red-900/50 text-red-300 border border-red-700';
+                else if(wClass === 'KELAS 2') badgeColor = 'bg-orange-900/50 text-orange-300 border border-orange-700';
+                else if(wClass === 'KELAS 3') badgeColor = 'bg-yellow-900/50 text-yellow-300 border border-yellow-700';
+                else if(wClass === 'KELAS 4') badgeColor = 'bg-green-900/50 text-green-300 border border-green-700';
+                else if(wClass === 'AKSESORIS') badgeColor = 'bg-purple-900/50 text-purple-300 border border-purple-700';
+                
+                // Calculate cost from recipe if available
+                const calculatedCost = calculateCostFromRecipe(w.name);
+                const displayCost = calculatedCost > 0 ? calculatedCost : (w.costPrice || 0);
+                const isAutoCalculated = calculatedCost > 0;
+                
+                return `
+                    <tr class="border-b border-slate-700 hover:bg-slate-700/30 transition">
+                        <td class="p-3">
+                            <div class="font-bold text-slate-200 text-sm">${p.name}</div>
+                            <div class="text-xs text-slate-500 mt-0.5">Stok: ${p.stock} | Harga: Rp ${p.sellingPrice.toLocaleString()}</div>
+                        </td>
+                        <td class="p-3 text-center">
+                            <span class="text-[9px] ${badgeColor} px-3 py-1 rounded font-bold uppercase">${wClass}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="openEditProductClass('${p.id}', '${p.name}', '${wClass}')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-bold transition">
+                                <i class="fas fa-edit mr-1"></i> Ubah
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.openEditProductClass = (productId, productName, currentClass) => {
+            document.getElementById('edit-class-product-id').value = productId;
+            document.getElementById('edit-class-product-name').textContent = productName;
+            document.getElementById('edit-class-select').value = currentClass === 'BELUM DISET' ? '' : currentClass;
+            document.getElementById('editProductClassModal').classList.remove('hidden');
+        };
+
+        window.closeEditProductClassModal = () => {
+            document.getElementById('editProductClassModal').classList.add('hidden');
+        };
+
+        window.saveProductClass = async () => {
+            const productId = document.getElementById('edit-class-product-id').value;
+            const newClass = document.getElementById('edit-class-select').value;
+            
+            if(!newClass) {
+                return showAlert("Error", "Pilih kelas produk terlebih dahulu!", "warning");
+            }
+            
+            try {
+                const productRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', productId);
+                await updateDoc(productRef, {
+                    weaponClass: newClass
+                });
+                
+                showAlert("Berhasil", `Kelas produk berhasil diupdate menjadi <b>${newClass}</b>!`, "success");
+                closeEditProductClassModal();
+                renderProductClassTable();
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal mengupdate kelas produk: " + err.message, "error");
+            }
+        };
+
+         // Helper: Calculate cost price from recipe
+        window.calculateCostFromRecipe = (productName) => {
+            const recipe = recipes[productName];
+            if (!recipe || !recipe.requirements) return 0;
+            
+            let totalCost = 0;
+            Object.entries(recipe.requirements).forEach(([material, qty]) => {
+                const materialPrice = materialPrices[material] || 0;
+                totalCost += materialPrice * qty;
+            });
+            
+            return totalCost;
+        };
+
+        // ==========================================
+        // MODULE 5: WEAPON DATABASE
+        // ==========================================
+        
+        
+        // Sync weapon data to products
+        window.syncWeaponToProducts = async () => {
+            if(productStock.length === 0) {
+                return showAlert("Info", "Belum ada produk untuk disync. Lakukan crafting terlebih dahulu.", "info");
+            }
+            
+            showConfirm(
+                "Sync Harga ke POS?",
+                "Apakah Anda yakin ingin menyinkronkan harga dari Database Senjata ke produk POS?",
+                async () => {
+                    try {
+                        const batch = writeBatch(db);
+                        let syncCount = 0;
+                        
+                        productStock.forEach(prod => {
+                            const weaponData = weaponDatabase.find(w => w.name === prod.name);
+                            
+                            if(weaponData) {
+                                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', prod.id);
+                                batch.update(prodRef, {
+                                    sellingPrice: weaponData.sellingPrice || 0,
+                                    weaponClass: weaponData.weaponClass || prod.category,
+                                    category: weaponData.weaponClass || prod.category
+                                });
+                                syncCount++;
+                            }
+                        });
+                        
+                        if(syncCount > 0) {
+                            await batch.commit();
+                            showAlert("Berhasil", `Berhasil sync ${syncCount} produk dengan Database Senjata!`, "success");
+                        } else {
+                            showAlert("Info", "Tidak ada produk yang perlu disync.", "info");
+                        }
+                    } catch(err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal sync: " + err.message, "error");
+                    }
+                },
+                "info"
+            );
+        };
+        window.renderWeaponDatabase = () => {
+            const tbody = document.getElementById('weapon-db-table-body');
+            const searchInput = document.getElementById('weapon-db-search');
+            const filterClass = document.getElementById('weapon-db-filter-class');
+            
+            if(!tbody) return;
+            
+            // DEBUG: Log untuk cek data
+            console.log('Weapon Database:', weaponDatabase);
+            console.log('Material Prices:', materialPrices);
+            console.log('Recipes:', recipes);
+            
+            let filtered = weaponDatabase;
+            
+            // Filter by search
+            if(searchInput && searchInput.value) {
+                const search = searchInput.value.toUpperCase();
+                filtered = filtered.filter(w => w.name.toUpperCase().includes(search));
+            }
+            
+            // Filter by class
+            if(filterClass && filterClass.value && filterClass.value !== 'SEMUA') {
+                filtered = filtered.filter(w => w.weaponClass === filterClass.value);
+            }
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-500 italic">Tidak ada data senjata. Import Excel untuk menambahkan.</td></tr>';
+                return;
+            }
+            
+            try {
+                tbody.innerHTML = filtered.map(w => {
+                    const wClass = w.weaponClass || 'Umum';
+                    let badgeColor = 'bg-slate-700 text-slate-300';
+                    
+                    if(wClass === 'KELAS 1') badgeColor = 'bg-red-900/50 text-red-300 border border-red-700';
+                    else if(wClass === 'KELAS 2') badgeColor = 'bg-orange-900/50 text-orange-300 border border-orange-700';
+                    else if(wClass === 'KELAS 3') badgeColor = 'bg-yellow-900/50 text-yellow-300 border border-yellow-700';
+                    else if(wClass === 'KELAS 4') badgeColor = 'bg-green-900/50 text-green-300 border border-green-700';
+                    else if(wClass === 'AKSESORIS') badgeColor = 'bg-purple-900/50 text-purple-300 border border-purple-700';
+                    
+                    // Calculate cost from recipe if available
+                    let calculatedCost = 0;
+                    let displayCost = 0;
+                    let isAutoCalculated = false;
+                    
+                    try {
+                        calculatedCost = calculateCostFromRecipe(w.name);
+                        displayCost = calculatedCost > 0 ? calculatedCost : (w.costPrice || 0);
+                        isAutoCalculated = calculatedCost > 0;
+                    } catch(err) {
+                        console.error('Error calculating cost for', w.name, err);
+                        displayCost = w.costPrice || 0;
+                    }
+                    
+                    return `
+                        <tr class="border-b border-slate-700 hover:bg-slate-700/30 transition">
+                            <td class="p-3">
+                                <div class="font-bold text-slate-200 text-sm">${w.name}</div>
+                                ${isAutoCalculated ? '<div class="text-[9px] text-blue-400 mt-1"><i class="fas fa-calculator mr-1"></i>Auto-calculated</div>' : ''}
+                            </td>
+                            <td class="p-3 text-center">
+                                <span class="text-[9px] ${badgeColor} px-2 py-1 rounded font-bold uppercase">${wClass}</span>
+                            </td>
+                            <td class="p-3 text-right font-mono ${isAutoCalculated ? 'text-blue-400' : 'text-yellow-400'}">Rp ${displayCost.toLocaleString()}</td>
+                            <td class="p-3 text-right font-mono text-emerald-400">Rp ${(w.sellingPrice || 0).toLocaleString()}</td>
+                            <td class="p-3 text-center">
+                                <div class="flex justify-center gap-2">
+                                    <button onclick="editWeaponData('${w.id}')" class="text-blue-400 hover:text-white transition" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteWeaponData('${w.id}', '${w.name}')" class="text-rose-400 hover:text-white transition" title="Hapus">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch(err) {
+                console.error('Error rendering weapon database:', err);
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-rose-500">Error menampilkan data. Cek console.</td></tr>';
+            }
+        };
+        
+        window.importWeaponDatabase = async (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                    if (jsonData.length === 0) {
+                        return showAlert("File Kosong", "File Excel tidak berisi data.", "warning");
+                    }
+
+                    const batch = writeBatch(db);
+                    let successCount = 0;
+
+                    jsonData.forEach(row => {
+                        const name = (row['Nama Senjata'] || row['Name'] || row['Nama'])?.toString().trim().toUpperCase();
+                        const weaponClass = (row['Kelas'] || row['Class'] || row['Kategori'])?.toString().trim().toUpperCase();
+                        const costPrice = parseFloat(row['Harga Modal'] || row['Cost Price'] || row['Modal'] || 0);
+                        const sellingPrice = parseFloat(row['Harga Jual'] || row['Selling Price'] || row['Jual'] || 0);
+
+                        if (name) {
+                            const weaponRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'weapon_database'));
+                            batch.set(weaponRef, {
+                                name,
+                                weaponClass: weaponClass || 'Umum',
+                                costPrice,
+                                sellingPrice
+                            });
+                            successCount++;
+                        }
+                    });
+
+                    if (successCount > 0) {
+                        await batch.commit();
+                        showAlert("Berhasil", `Berhasil mengimport <b>${successCount}</b> data senjata!`, "success");
+                    } else {
+                        showAlert("Gagal", "Tidak ada data valid untuk diimport. Pastikan ada kolom 'Nama Senjata'.", "error");
+                    }
+                    
+                    input.value = '';
+                } catch (err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal membaca Excel: " + err.message, "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+        
+        window.openAddWeaponModal = () => {
+            document.getElementById('weapon-form').reset();
+            document.getElementById('weapon-modal-title').textContent = 'Tambah Senjata Baru';
+            document.getElementById('weapon-id-input').value = '';
+            document.getElementById('addWeaponModal').classList.remove('hidden');
+        };
+        
+        window.closeAddWeaponModal = () => {
+            document.getElementById('addWeaponModal').classList.add('hidden');
+        };
+        
+        window.saveWeaponData = async (e) => {
+            e.preventDefault();
+            
+            const weaponId = document.getElementById('weapon-id-input').value;
+            const name = document.getElementById('weapon-name').value.trim().toUpperCase();
+            const weaponClass = document.getElementById('weapon-class').value;
+            const costPrice = parseFloat(document.getElementById('weapon-cost').value) || 0;
+            const sellingPrice = parseFloat(document.getElementById('weapon-sell').value) || 0;
+            
+            if(!name) return showAlert("Error", "Nama senjata harus diisi!", "warning");
+            if(!weaponClass) return showAlert("Error", "Pilih kelas senjata!", "warning");
+            
+            try {
+                const weaponData = { name, weaponClass, costPrice, sellingPrice };
+                
+                if(weaponId) {
+                    // Update existing
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'weapon_database', weaponId), weaponData);
+                    showAlert("Berhasil", "Data senjata berhasil diupdate!", "success");
+                } else {
+                    // Add new
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'weapon_database'), weaponData);
+                    showAlert("Berhasil", "Senjata baru berhasil ditambahkan!", "success");
+                }
+                
+                closeAddWeaponModal();
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal menyimpan data: " + err.message, "error");
+            }
+        };
+        
+        window.editWeaponData = (weaponId) => {
+            const weapon = weaponDatabase.find(w => w.id === weaponId);
+            if(!weapon) return;
+            
+            document.getElementById('weapon-modal-title').textContent = 'Edit Data Senjata';
+            document.getElementById('weapon-id-input').value = weaponId;
+            document.getElementById('weapon-name').value = weapon.name;
+            document.getElementById('weapon-class').value = weapon.weaponClass;
+            document.getElementById('weapon-cost').value = weapon.costPrice || 0;
+            document.getElementById('weapon-sell').value = weapon.sellingPrice || 0;
+            
+            document.getElementById('addWeaponModal').classList.remove('hidden');
+        };
+        
+        window.deleteWeaponData = (weaponId, weaponName) => {
+            showConfirm("Hapus Data Senjata?", `Yakin ingin menghapus <b>${weaponName}</b> dari database?`, async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'weapon_database', weaponId));
+                    showAlert("Berhasil", "Data senjata berhasil dihapus.", "success");
+                } catch(err) {
+                    console.error(err);
+                    showAlert("Error", "Gagal menghapus: " + err.message, "error");
+                }
+            }, "danger");
+        };
+        
+        window.deleteAllWeaponDatabase = () => {
+            if(weaponDatabase.length === 0) {
+                return showAlert("Info", "Database senjata sudah kosong.", "info");
+            }
+            
+            showConfirm(
+                "Hapus Semua Database?",
+                `Apakah Anda yakin ingin menghapus <b>SEMUA ${weaponDatabase.length} data senjata</b>?<br><br><span class='text-rose-500 font-bold'>PERINGATAN: Aksi ini tidak dapat dibatalkan!</span>`,
+                async () => {
+                    try {
+                        const batch = writeBatch(db);
+                        weaponDatabase.forEach(w => {
+                            batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'weapon_database', w.id));
+                        });
+                        
+                        await batch.commit();
+                        showAlert("Berhasil", `Berhasil menghapus ${weaponDatabase.length} data senjata.`, "success");
+                    } catch(err) {
+                        console.error(err);
+                        showAlert("Error", "Gagal menghapus database: " + err.message, "error");
+                    }
+                },
+                "danger"
+            );
+        };
+
         // ==========================================
         // MODULE 3: GUN POS (PENJUALAN)
         // ==========================================
         let cart = [];
 
         window.renderPosGrid = () => {
-            const grid = document.getElementById('pos-grid');
-            grid.innerHTML = productStock.map(p => {
-                const inStock = p.stock > 0;
-                return `
-                <div onclick="${inStock ? `addToCart('${p.id}')` : ''}" 
-                    class="bg-slate-800 border ${inStock ? 'border-slate-700 hover:border-blue-500 cursor-pointer' : 'border-rose-900/50 opacity-60'} rounded-lg p-4 relative group transition">
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-white text-sm">${p.name}</h4>
-                        <span class="text-[10px] bg-slate-900 px-2 py-0.5 rounded text-slate-400">${p.category}</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                        <span class="text-xs text-slate-400">Stok: ${p.stock}</span>
-                        <span class="text-emerald-400 font-bold text-sm">Rp ${p.sellingPrice.toLocaleString()}</span>
-                    </div>
-                    ${!inStock ? '<div class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg text-rose-500 font-bold text-xs">HABIS</div>' : ''}
-                </div>`;
-            }).join('');
-        };
+    const grid = document.getElementById('pos-grid');
+    
+    // Filter products based on selected class
+    let filtered = productStock;
+    if(posFilterClass !== 'SEMUA') {
+        filtered = productStock.filter(p => (p.weaponClass || p.category) === posFilterClass);
+    }
+    
+    if(filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-20">Tidak ada produk di kategori ini.</div>';
+        return;
+    }
+    
+    grid.innerHTML = filtered.map(p => {
+        const inStock = p.stock > 0;
+        const wClass = p.weaponClass || p.category || 'Umum';
+
+         // Calculate cost from recipe
+        const calculatedCost = calculateCostFromRecipe(p.name);
+        const displayCost = calculatedCost > 0 ? calculatedCost : (p.costPrice || 0);
+        const profit = p.sellingPrice - displayCost;
+        const profitMargin = displayCost > 0 ? ((profit / displayCost) * 100).toFixed(1) : 0;
+        
+        // Dynamic badge color based on class
+        let badgeColor = 'bg-slate-700 text-slate-300';
+        if(wClass === 'KELAS 1') badgeColor = 'bg-red-900/50 text-red-300 border border-red-700';
+        else if(wClass === 'KELAS 2') badgeColor = 'bg-orange-900/50 text-orange-300 border border-orange-700';
+        else if(wClass === 'KELAS 3') badgeColor = 'bg-yellow-900/50 text-yellow-300 border border-yellow-700';
+        else if(wClass === 'KELAS 4') badgeColor = 'bg-green-900/50 text-green-300 border border-green-700';
+        else if(wClass === 'AKSESORIS') badgeColor = 'bg-purple-900/50 text-purple-300 border border-purple-700';
+        
+        return `
+        <div onclick="${inStock ? `addToCart('${p.id}')` : ''}" 
+            class="bg-slate-800 border ${inStock ? 'border-slate-700 hover:border-blue-500 cursor-pointer' : 'border-rose-900/50 opacity-60'} rounded-lg p-4 relative group transition">
+            <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-white text-sm">${p.name}</h4>
+                <span class="text-[9px] ${badgeColor} px-2 py-0.5 rounded font-bold uppercase">${wClass}</span>
+            </div>
+            <div class="mb-2">
+                <div class="text-[9px] text-slate-500 mb-0.5">Modal: <span class="text-yellow-400 font-mono">Rp ${displayCost.toLocaleString()}</span></div>
+                <div class="text-[9px] text-slate-500">Profit: <span class="text-emerald-400 font-mono">Rp ${profit.toLocaleString()} (${profitMargin}%)</span></div>
+            </div>
+            <div class="flex justify-between items-end">
+                <span class="text-xs text-slate-400">Stok: ${p.stock}</span>
+                <span class="text-emerald-400 font-bold text-sm">Rp ${p.sellingPrice.toLocaleString()}</span>
+            </div>
+            ${!inStock ? '<div class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg text-rose-500 font-bold text-xs">HABIS</div>' : ''}
+        </div>`;
+    }).join('');
+};
 
         window.addToCart = (id) => {
             const prod = productStock.find(p => p.id === id);
@@ -2074,14 +2615,23 @@
         window.renderCart = () => {
             const container = document.getElementById('pos-cart-items');
             let total = 0;
+            let totalProfit = 0;
+            
             container.innerHTML = cart.map((c, idx) => {
                 const sub = c.qty * c.sellingPrice;
                 total += sub;
+                
+                // Calculate cost and profit
+                const calculatedCost = calculateCostFromRecipe(c.name);
+                const displayCost = calculatedCost > 0 ? calculatedCost : (c.costPrice || 0);
+                const itemProfit = (c.sellingPrice - displayCost) * c.qty;
+                totalProfit += itemProfit;
                 return `
                 <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-2 text-sm border border-slate-700">
                     <div class="flex-1">
                         <div class="font-bold text-slate-200">${c.name}</div>
                         <div class="text-xs text-slate-500">@ ${c.sellingPrice.toLocaleString()}</div>
+                        <div class="text-[9px] text-emerald-400">Profit: Rp ${itemProfit.toLocaleString()}</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="updateCart(${idx}, -1)" class="w-6 h-6 bg-slate-700 rounded text-xs">-</button>
@@ -2090,6 +2640,18 @@
                     </div>
                 </div>`;
             }).join('');
+
+             // Add profit summary
+            if(cart.length > 0) {
+                container.innerHTML += `
+                    <div class="mt-3 p-2 bg-emerald-900/20 border border-emerald-700/50 rounded text-xs">
+                        <div class="flex justify-between text-emerald-400">
+                            <span>Total Profit Transaksi:</span>
+                            <span class="font-bold font-mono">Rp ${totalProfit.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+            }
             
             document.getElementById('pos-total').innerText = `Rp ${total.toLocaleString()}`;
             document.getElementById('btn-checkout').disabled = cart.length === 0;
@@ -2294,6 +2856,10 @@
             <div id="btn-history" onclick="switchTab('history')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-history w-5 text-center"></i>
                 <span>Riwayat Global</span>
+            </div>
+            <div id="btn-weapon-db" onclick="switchTab('weapon-db')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+                <i class="fas fa-database w-5 text-center"></i>
+                <span>Database Senjata</span>
             </div>
         </nav>
 
@@ -2544,8 +3110,34 @@
                         <p class="text-slate-400">Penjualan produk jadi kepada pelanggan.</p>
                     </div>
                 </header>
+                <div class="glass-panel rounded-xl p-4 mb-6 border-l-4 border-blue-500">
+    <div class="flex items-center gap-2 mb-2">
+        <i class="fas fa-filter text-blue-400"></i>
+        <h4 class="text-sm font-bold text-slate-300 uppercase">Filter Kategori Senjata</h4>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <button onclick="filterPosByClass('SEMUA')" class="pos-filter-btn active-filter px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition border-2 border-transparent">
+            <i class="fas fa-th mr-1"></i> SEMUA
+        </button>
+        <button onclick="filterPosByClass('KELAS 1')" class="pos-filter-btn px-4 py-2 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-300 text-xs font-bold transition border-2 border-red-700/50">
+            KELAS 1
+        </button>
+        <button onclick="filterPosByClass('KELAS 2')" class="pos-filter-btn px-4 py-2 rounded-lg bg-orange-900/30 hover:bg-orange-900/50 text-orange-300 text-xs font-bold transition border-2 border-orange-700/50">
+            KELAS 2
+        </button>
+        <button onclick="filterPosByClass('KELAS 3')" class="pos-filter-btn px-4 py-2 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-300 text-xs font-bold transition border-2 border-yellow-700/50">
+            KELAS 3
+        </button>
+        <button onclick="filterPosByClass('KELAS 4')" class="pos-filter-btn px-4 py-2 rounded-lg bg-green-900/30 hover:bg-green-900/50 text-green-300 text-xs font-bold transition border-2 border-green-700/50">
+            KELAS 4
+        </button>
+        <button onclick="filterPosByClass('AKSESORIS')" class="pos-filter-btn px-4 py-2 rounded-lg bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 text-xs font-bold transition border-2 border-purple-700/50">
+            <i class="fas fa-puzzle-piece mr-1"></i> AKSESORIS
+        </button>
+    </div>
+</div>
 
-                <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-150px)]">
+                <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-280px)]">
                     <div class="flex-1 glass-panel rounded-xl p-4 overflow-y-auto custom-scrollbar">
                          <div id="pos-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                              <div class="col-span-full text-center text-slate-500 py-20">Belum ada stok barang jadi. Lakukan Crafting dulu.</div>
@@ -2572,6 +3164,12 @@
                             </div>
                             <button id="btn-checkout" onclick="checkout()" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-lg shadow-lg transition">
                                 PROSES TRANSAKSI
+                            </button>
+                        </div>
+                        <!-- MANAGE PRODUCT CLASS BUTTON -->
+                        <div class="p-3 bg-slate-900/50 border-t border-slate-700">
+                            <button onclick="openProductClassManager()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg text-xs transition flex items-center justify-center">
+                                <i class="fas fa-cog mr-2"></i> Kelola Kelas Produk
                             </button>
                         </div>
                     </div>
@@ -2601,7 +3199,96 @@
                     </table>
                 </div>
             </section>
+             <!-- 5. WEAPON DATABASE VIEW -->
+            <section id="weapon-db" class="page-section max-w-7xl mx-auto">
+                <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Database Senjata</h2>
+                        <p class="text-slate-400">Kelola master data senjata: nama, kelas, harga modal & jual.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="openAddWeaponModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                            <i class="fas fa-plus-circle mr-2"></i> Tambah Manual
+                        </button>
+                        <button onclick="syncWeaponToProducts()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                            <i class="fas fa-sync mr-2"></i> Sync ke POS
+                        </button>
+                        <button onclick="document.getElementById('weapon-db-import').click()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                            <i class="fas fa-file-excel mr-2"></i> Import Excel
+                        </button>
+                        <input type="file" id="weapon-db-import" accept=".xlsx, .xls" class="hidden" onchange="importWeaponDatabase(this)">
+                    </div>
+                </header>
 
+                <!-- Filter & Search -->
+                <div class="glass-panel p-4 rounded-xl mb-6 flex flex-col md:flex-row gap-3">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                        <input type="text" id="weapon-db-search" onkeyup="renderWeaponDatabase()" placeholder="Cari nama senjata..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                    </div>
+                    <div class="w-full md:w-64">
+                        <select id="weapon-db-filter-class" onchange="renderWeaponDatabase()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                            <option value="SEMUA">🔍 Semua Kelas</option>
+                            <option value="KELAS 1">🔴 Kelas 1</option>
+                            <option value="KELAS 2">🟠 Kelas 2</option>
+                            <option value="KELAS 3">🟡 Kelas 3</option>
+                            <option value="KELAS 4">🟢 Kelas 4</option>
+                            <option value="AKSESORIS">🟣 Aksesoris</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-white">Data Senjata</h3>
+                        <button onclick="deleteAllWeaponDatabase()" class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
+                            <i class="fas fa-trash-alt mr-2"></i> Hapus Semua
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-slate-700 rounded-lg">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold">
+                                <tr>
+                                    <th class="p-3">Nama Senjata</th>
+                                    <th class="p-3 text-center">Kelas</th>
+                                    <th class="p-3 text-right">Harga Modal</th>
+                                    <th class="p-3 text-right">Harga Jual</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="weapon-db-table-body">
+                                <tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Info Panel -->
+                <div class="mt-6 glass-panel p-4 rounded-xl border-l-4 border-cyan-500">
+                    <h4 class="text-sm font-bold text-cyan-400 mb-2 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i> Integrasi Harga Otomatis
+                    </h4>
+                    <div class="text-xs text-slate-400 space-y-2">
+                        <p>💡 <b>Harga Modal Otomatis:</b></p>
+                        <ul class="list-disc list-inside ml-4 space-y-1">
+                            <li>Harga modal dihitung otomatis dari <b>Resep Produksi</b> × <b>Harga Bahan</b></li>
+                            <li>Data terintegrasi dengan modul Gudang Bahan dan POS</li>
+                            <li>Perubahan harga bahan akan otomatis update perhitungan</li>
+                            <li>Item dengan harga auto-calculated ditandai <span class="text-blue-400"><i class="fas fa-calculator"></i></span></li>
+                        </ul>
+                        
+                        <p class="mt-3">📋 <b>Format Excel untuk Import (Opsional):</b></p>
+                        <ul class="list-disc list-inside ml-4 space-y-0.5">
+                            <li><b>Nama Senjata</b> / Name / Nama</li>
+                            <li><b>Kelas</b> / Class / Kategori</li>
+                            <li><b>Harga Jual</b> / Selling Price / Jual</li>
+                            <li><i>Harga Modal diabaikan (auto-calculated)</i></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 
@@ -2783,6 +3470,128 @@
         </div>
     </div>
 
+     <!-- NEW PRODUCT CLASS MANAGER MODAL -->
+    <div id="productClassModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-3xl p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-purple-400 flex items-center">
+                    <i class="fas fa-layer-group mr-3"></i>Kelola Kelas Produk
+                </h3>
+                <button onclick="closeProductClassModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="mb-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="product-class-search" onkeyup="renderProductClassTable()" placeholder="Cari produk..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-purple-500 outline-none">
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="mb-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Legenda Kelas:</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-[9px] bg-red-900/50 text-red-300 border border-red-700 px-2 py-0.5 rounded font-bold">KELAS 1 - Militer Berat</span>
+                    <span class="text-[9px] bg-orange-900/50 text-orange-300 border border-orange-700 px-2 py-0.5 rounded font-bold">KELAS 2 - Militer Menengah</span>
+                    <span class="text-[9px] bg-yellow-900/50 text-yellow-300 border border-yellow-700 px-2 py-0.5 rounded font-bold">KELAS 3 - Sipil Berat</span>
+                    <span class="text-[9px] bg-green-900/50 text-green-300 border border-green-700 px-2 py-0.5 rounded font-bold">KELAS 4 - Sipil Standar</span>
+                    <span class="text-[9px] bg-purple-900/50 text-purple-300 border border-purple-700 px-2 py-0.5 rounded font-bold">AKSESORIS - Tambahan</span>
+                </div>
+            </div>
+            
+            <!-- Product Table -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
+                        <tr>
+                            <th class="p-3">Nama Produk</th>
+                            <th class="p-3 text-center">Kelas Saat Ini</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-class-table-body" class="divide-y divide-slate-700/50">
+                        <tr><td colspan="3" class="p-4 text-center text-slate-500 italic">Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT PRODUCT CLASS MODAL -->
+    <div id="editProductClassModal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
+            <h3 class="text-lg font-bold text-white mb-4">Ubah Kelas Produk</h3>
+            <div class="space-y-4">
+                <input type="hidden" id="edit-class-product-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Nama Produk</label>
+                    <div id="edit-class-product-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-200 text-sm font-bold"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Pilih Kelas Baru</label>
+                    <select id="edit-class-select" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none font-bold">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="KELAS 1">🔴 KELAS 1 - Militer Berat</option>
+                        <option value="KELAS 2">🟠 KELAS 2 - Militer Menengah</option>
+                        <option value="KELAS 3">🟡 KELAS 3 - Sipil Berat</option>
+                        <option value="KELAS 4">🟢 KELAS 4 - Sipil Standar</option>
+                        <option value="AKSESORIS">🟣 AKSESORIS - Tambahan</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeEditProductClassModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                <button onclick="saveProductClass()" class="flex-1 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 font-bold transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i> Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ADD/EDIT WEAPON MODAL -->
+    <div id="addWeaponModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
+            <h3 id="weapon-modal-title" class="text-lg font-bold text-white mb-4">Tambah Senjata Baru</h3>
+            <form id="weapon-form" onsubmit="saveWeaponData(event)" class="space-y-4">
+                <input type="hidden" id="weapon-id-input">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Nama Senjata</label>
+                    <input type="text" id="weapon-name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none uppercase font-bold">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Kelas Senjata</label>
+                    <select id="weapon-class" required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none font-bold">
+                        <option value="">-- Pilih Kelas --</option>
+                        <option value="KELAS 1">🔴 KELAS 1 - Militer Berat</option>
+                        <option value="KELAS 2">🟠 KELAS 2 - Militer Menengah</option>
+                        <option value="KELAS 3">🟡 KELAS 3 - Sipil Berat</option>
+                        <option value="KELAS 4">🟢 KELAS 4 - Sipil Standar</option>
+                        <option value="AKSESORIS">🟣 AKSESORIS - Tambahan</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Harga Modal (Rp)</label>
+                        <input type="number" id="weapon-cost" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Harga Jual (Rp)</label>
+                        <input type="number" id="weapon-sell" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-emerald-500 outline-none font-mono">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeAddWeaponModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                    <button type="submit" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">
+                        <i class="fas fa-save mr-2"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- BULK UPDATE MODAL REFINED -->
     <div id="bulkUpdateModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 m-auto modal-scale flex flex-col max-h-[90vh]">
@@ -2981,3 +3790,4 @@
 
 </body>
 </html>
+
