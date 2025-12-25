@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,68 +14,140 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; overflow: hidden; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .sidebar-item { transition: all 0.2s; cursor: pointer; border-left: 3px solid transparent; }
-        .sidebar-item:hover, .sidebar-item.active { background: rgba(59, 130, 246, 0.1); border-left-color: #3b82f6; color: #60a5fa; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item {
+            transition: all 0.2s;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: #3b82f6;
+            color: #60a5fa;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
 
         /* Smooth fade animation for table rows */
-#group-table-body tr {
-    animation: fadeInRow 0.3s ease-out;
-}
+        #group-table-body tr {
+            animation: fadeInRow 0.3s ease-out;
+        }
 
-@keyframes fadeInRow {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+        @keyframes fadeInRow {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
 
-/* Highlight new/updated row briefly */
-@keyframes highlightRow {
-    0%, 100% { background-color: transparent; }
-    50% { background-color: rgba(139, 92, 246, 0.2); }
-}
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-.row-highlight {
-    animation: highlightRow 1s ease;
-}
+        /* Highlight new/updated row briefly */
+        @keyframes highlightRow {
+
+            0%,
+            100% {
+                background-color: transparent;
+            }
+
+            50% {
+                background-color: rgba(139, 92, 246, 0.2);
+            }
+        }
+
+        .row-highlight {
+            animation: highlightRow 1s ease;
+        }
 
 
         /* Filter Button Active State */
-        .pos-filter-btn.active-filter { 
+        .pos-filter-btn.active-filter {
             background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
             border-color: #60a5fa !important;
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
             transform: scale(1.05);
         }
-        
-        .page-section { display: none; animation: fadeIn 0.3s ease-out; }
-        .page-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+
+        .page-section {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Modal Scale Animation */
-        .modal-scale { animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes modalScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-scale {
+            animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalScale {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
 
         .receipt-pattern {
             background-color: #ffffff;
             background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
             background-size: 20px 20px;
         }
+
         /* Recipe Card Hover Effects */
         .recipe-card-actions {
             opacity: 0;
             transition: opacity 0.2s ease;
         }
-        
+
         .recipe-card:hover .recipe-card-actions {
             opacity: 1;
         }
@@ -184,6 +257,32 @@
             pointer-events: none;
             font-size: 14px;
         }
+        /* Slide animations for collapsible reports */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        max-height: 2000px;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        max-height: 2000px;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-10px);
+    }
+}
     </style>
 
     <script type="module">
@@ -221,6 +320,10 @@
         let craftQueue = []; // ANTRIAN CRAFTING
         let weaponDatabase = []; // DATABASE SENJATA
         let groupDatabase = []; // DATABASE KELOMPOK & LIMIT
+        let lastSalesTransaction = null; // Store last transaction for report
+        let lastCraftingReport = null; // Store crafting material usage report
+        let allCraftingReports = []; // Store ALL crafting reports
+        let salesHistory = []; // Store sales transaction history
         
         // --- MODAL STATE ---
         let currentAction = null; 
@@ -327,16 +430,40 @@ window.filterPosByClass = (className) => {
                 renderHistoryTable();
             });
 
+            // Listener for Sales History
+const qSalesHist = query(
+    collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), 
+    where('type', '==', 'SALES'),
+    orderBy('timestamp', 'desc'), 
+    limit(50)
+);
+onSnapshot(qSalesHist, (snap) => {
+    salesHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+    // Auto-update if POS page is active
+    if(document.getElementById('pos').classList.contains('active')) {
+        renderSalesHistory();
+    }
+});
+
             const qWhHist = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), orderBy('timestamp', 'desc'), limit(150));
-            onSnapshot(qWhHist, (snap) => {
-                const allLogs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                warehouseSpecificHistory = allLogs.filter(log => log.type === 'WAREHOUSE');
-                // Filter juga untuk Crafting History
-                craftingHistory = allLogs.filter(log => log.type === 'CRAFTING');
-                
-                renderWarehouseSpecificHistory();
-                renderCraftingHistory(); // Update modal jika terbuka
-            });
+onSnapshot(qWhHist, (snap) => {
+    const allLogs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    warehouseSpecificHistory = allLogs.filter(log => log.type === 'WAREHOUSE');
+    // Filter juga untuk Crafting History
+    craftingHistory = allLogs.filter(log => log.type === 'CRAFTING');
+    
+    // NEW: Store all crafting as reports
+    allCraftingReports = craftingHistory.map(log => ({
+        timestamp: log.timestamp ? new Date(log.timestamp.seconds*1000) : new Date(),
+        products: log.details ? log.details.map(d => ({name: d.name, qty: d.qty})) : [],
+        materialUsage: calculateMaterialUsageFromLog(log),
+        rawLog: log
+    }));
+    
+    renderWarehouseSpecificHistory();
+    renderCraftingHistory(); // Update modal jika terbuka
+});
             
             // Listener Weapon Database
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'weapon_database'), (snap) => {
@@ -357,6 +484,30 @@ onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), (snap
 });
 
         }
+
+        // Helper: Calculate material usage from crafting log
+function calculateMaterialUsageFromLog(log) {
+    if(!log.details) return {};
+    
+    const usage = {};
+    log.details.forEach(item => {
+        if(item.materials) {
+            Object.entries(item.materials).forEach(([mat, qty]) => {
+                if(!usage[mat]) {
+                    usage[mat] = {
+                        before: 0,
+                        used: 0,
+                        after: 0
+                    };
+                }
+                usage[mat].used += qty;
+            });
+        }
+    });
+    
+    return usage;
+}
+
 
         // --- CUSTOM ALERT SYSTEM ---
         window.showAlert = (title, message, type = 'info') => {
@@ -2310,6 +2461,9 @@ window.deleteGroup = (groupId, groupName) => {
                     const newWhStock = { ...warehouseStock };
                     const historyDetails = [];
                     const logDataPayload = []; // For structured history
+                    // TAMBAHKAN INI - Store material usage before/after
+                    const materialUsageBefore = { ...warehouseStock };
+                    const materialUsageDetail = {}; // Track what was used
 
                     // 1. Calculate Deductions & Updates
                     craftQueue.forEach(item => {
@@ -2321,8 +2475,17 @@ window.deleteGroup = (groupId, groupName) => {
                             const totalNeeded = req * item.qty;
                             newWhStock[mat] -= totalNeeded;
                             matUsed[mat] = totalNeeded;
+                            
+                            // TAMBAHKAN INI - Track total material usage
+                            if(!materialUsageDetail[mat]) {
+                                materialUsageDetail[mat] = {
+                                    before: materialUsageBefore[mat] || 0,
+                                    used: 0,
+                                    after: 0
+                                };
+                            }
+                            materialUsageDetail[mat].used += totalNeeded;
                         });
-
                         // Update Product Stock
                         const existingProd = productStock.find(p => p.name === item.name);
                         
@@ -2373,9 +2536,33 @@ window.deleteGroup = (groupId, groupName) => {
 
                     // 4. Commit
                     await batch.commit();
-                    
-                    showAlert("Sukses", "Produksi massal berhasil diselesaikan!", "success");
-                    resetCraftQueue();
+
+                        // TAMBAHKAN INI - Finalize material usage report
+                        Object.keys(materialUsageDetail).forEach(mat => {
+                            materialUsageDetail[mat].after = newWhStock[mat] || 0;
+                        });
+
+                        lastCraftingReport = {
+                            timestamp: new Date(),
+                            products: craftQueue.map(item => ({
+                                name: item.name,
+                                qty: item.qty
+                            })),
+                            materialUsage: materialUsageDetail
+                        };
+
+                        resetCraftQueue();
+
+                        // Show success with option to view report
+                        showConfirm(
+                            "Produksi Berhasil! 🎉",
+                            `Produksi <b>${craftQueue.length} jenis produk</b> berhasil diselesaikan.<br><br>` +
+                            `Apakah Anda ingin melihat laporan penggunaan bahan?`,
+                            () => {
+                                openCraftingReportModal();
+                            },
+                            "success"
+                        );
 
                 } catch(err) {
                     console.error(err);
@@ -2485,6 +2672,512 @@ window.deleteGroup = (groupId, groupName) => {
                 </div>
             `).join('');
         };
+
+        // SALES REPORT MODAL
+window.openSalesReportModal = () => {
+    if(!lastSalesTransaction) {
+        return showAlert("Error", "Tidak ada data transaksi untuk ditampilkan.", "warning");
+    }
+    
+    renderSalesReport();
+    document.getElementById('salesReportModal').classList.remove('hidden');
+};
+
+// CRAFTING MATERIAL USAGE REPORT
+window.openCraftingReportModal = () => {
+    if(allCraftingReports.length === 0) {
+        return showAlert("Error", "Tidak ada data produksi untuk ditampilkan.", "warning");
+    }
+     // Update title
+    const title = document.querySelector('#craftingReportModal h3');
+    if(title) {
+        title.innerHTML = `<i class="fas fa-industry mr-2 text-purple-400"></i> Riwayat Lengkap Produksi (${allCraftingReports.length} Laporan)`;
+    }
+    
+    renderAllCraftingReports();
+    document.getElementById('craftingReportModal').classList.remove('hidden');
+};
+
+window.renderAllCraftingReports = () => {
+    const container = document.getElementById('craftingReportContent');
+    if(!container) return;
+    
+    if(allCraftingReports.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-500 py-10 italic">Belum ada riwayat produksi.</div>';
+        return;
+    }
+    
+    container.innerHTML = allCraftingReports.map((report, idx) => {
+        const date = report.timestamp.toLocaleString('id-ID', { 
+            dateStyle: 'medium', 
+            timeStyle: 'short' 
+        });
+        
+        const totalProducts = report.products.reduce((sum, p) => sum + p.qty, 0);
+        const totalMaterialTypes = Object.keys(report.materialUsage).length;
+        const totalUsed = Object.values(report.materialUsage).reduce((sum, data) => sum + data.used, 0);
+        
+        return `
+            <div class="bg-slate-800 border border-slate-700 rounded-lg mb-3 overflow-hidden">
+                <!-- Header (Always Visible) -->
+                <div onclick="toggleCraftingReport(${idx})" 
+                     class="p-4 cursor-pointer hover:bg-slate-700/50 transition flex justify-between items-center">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-1">
+                            <h4 class="font-bold text-purple-400">Laporan Produksi #${allCraftingReports.length - idx}</h4>
+                            <span class="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded">
+                                ${report.products.length} Jenis • ${totalProducts} Unit
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400">
+                            <i class="fas fa-clock mr-1"></i> ${date}
+                        </p>
+                        <div class="flex gap-4 mt-2 text-xs">
+                            <span class="text-slate-500">
+                                <i class="fas fa-boxes text-blue-400 mr-1"></i> ${totalMaterialTypes} Bahan
+                            </span>
+                            <span class="text-slate-500">
+                                <i class="fas fa-arrow-down text-rose-400 mr-1"></i> ${totalUsed.toLocaleString()} Unit Terpakai
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="event.stopPropagation(); takeElementScreenshot('craft-report-detail-${idx}', 'Laporan_Produksi_${idx}')" 
+                                class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-3 py-2 transition text-xs">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <i id="icon-${idx}" class="fas fa-chevron-down text-slate-500 transition-transform"></i>
+                    </div>
+                </div>
+                
+                <!-- Detail (Collapsible) -->
+                <div id="craft-report-detail-${idx}" class="hidden">
+                    <div class="p-4 pt-0 border-t border-slate-700">
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-3 gap-3 mb-4">
+                            <div class="bg-blue-900/20 border border-blue-700/50 rounded p-3 text-center">
+                                <div class="text-2xl font-bold text-blue-400">${report.products.length}</div>
+                                <div class="text-xs text-slate-500 uppercase mt-1">Jenis Produk</div>
+                            </div>
+                            <div class="bg-purple-900/20 border border-purple-700/50 rounded p-3 text-center">
+                                <div class="text-2xl font-bold text-purple-400">${totalMaterialTypes}</div>
+                                <div class="text-xs text-slate-500 uppercase mt-1">Jenis Bahan</div>
+                            </div>
+                            <div class="bg-rose-900/20 border border-rose-700/50 rounded p-3 text-center">
+                                <div class="text-2xl font-bold text-rose-400">${totalUsed.toLocaleString()}</div>
+                                <div class="text-xs text-slate-500 uppercase mt-1">Total Terpakai</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Products List -->
+                        <div class="mb-4">
+                            <h5 class="text-xs font-bold text-slate-400 uppercase mb-2">
+                                <i class="fas fa-boxes mr-1"></i> Produk yang Dibuat
+                            </h5>
+                            <div class="bg-slate-900/50 border border-slate-700 rounded p-3">
+                                ${report.products.map(p => 
+                                    `<span class="inline-block bg-blue-900/50 text-blue-300 border border-blue-700/50 px-3 py-1 rounded-full text-xs font-bold mr-2 mb-2">
+                                        ${p.name} <span class="text-blue-400">×${p.qty}</span>
+                                    </span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Materials Table -->
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-400 uppercase mb-2">
+                                <i class="fas fa-list mr-1"></i> Bahan yang Digunakan
+                            </h5>
+                            <div class="border border-slate-700 rounded overflow-hidden bg-slate-900/30">
+                                <table class="w-full">
+                                    <thead class="bg-slate-800 text-xs text-slate-500 uppercase">
+                                        <tr>
+                                            <th class="p-2 text-left">Nama Bahan</th>
+                                            <th class="p-2 text-center">Digunakan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${Object.entries(report.materialUsage).map(([mat, data]) => `
+                                            <tr class="border-b border-slate-700 hover:bg-slate-700/30 transition text-xs">
+                                                <td class="p-2 font-bold text-slate-200">${mat}</td>
+                                                <td class="p-2 text-center">
+                                                    <div class="font-mono text-rose-400 font-bold">-${data.used.toLocaleString()}</div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+window.toggleCraftingReport = (idx) => {
+    const detail = document.getElementById(`craft-report-detail-${idx}`);
+    const icon = document.getElementById(`icon-${idx}`);
+    
+    if(!detail || !icon) return;
+    
+    const isHidden = detail.classList.contains('hidden');
+    
+    if(isHidden) {
+        // Expand
+        detail.classList.remove('hidden');
+        detail.style.animation = 'slideDown 0.3s ease-out';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        // Collapse
+        detail.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            detail.classList.add('hidden');
+        }, 250);
+        icon.style.transform = 'rotate(0deg)';
+    }
+};
+
+window.toggleAllCraftingReports = (expand) => {
+    allCraftingReports.forEach((_, idx) => {
+        const detail = document.getElementById(`craft-report-detail-${idx}`);
+        const icon = document.getElementById(`icon-${idx}`);
+        
+        if(!detail || !icon) return;
+        
+        if(expand) {
+            // Expand all
+            detail.classList.remove('hidden');
+            detail.style.animation = 'slideDown 0.3s ease-out';
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            // Collapse all
+            detail.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    });
+};
+
+window.closeCraftingReportModal = () => {
+    document.getElementById('craftingReportModal').classList.add('hidden');
+};
+
+window.renderCraftingReport = () => {
+    const container = document.getElementById('craftingReportContent');
+    if(!container || !lastCraftingReport) return;
+    
+    const report = lastCraftingReport;
+    const date = report.timestamp.toLocaleString('id-ID', { 
+        dateStyle: 'full', 
+        timeStyle: 'short' 
+    });
+    
+    // Build products summary
+    const productsHtml = report.products.map(p => 
+        `<span class="inline-block bg-blue-900/50 text-blue-300 border border-blue-700/50 px-3 py-1 rounded-full text-xs font-bold mr-2 mb-2">
+            ${p.name} <span class="text-blue-400">×${p.qty}</span>
+        </span>`
+    ).join('');
+    
+    // Build material usage table
+    const materialsHtml = Object.entries(report.materialUsage).map(([mat, data]) => {
+        const percentUsed = ((data.used / data.before) * 100).toFixed(1);
+        
+        return `
+            <tr class="border-b border-slate-700 hover:bg-slate-700/30 transition">
+                <td class="p-3 font-bold text-slate-200">${mat}</td>
+                <td class="p-3 text-center">
+                    <div class="font-mono text-slate-400 text-sm">${data.before.toLocaleString()}</div>
+                </td>
+                <td class="p-3 text-center">
+                    <div class="font-mono text-rose-400 font-bold text-sm">-${data.used.toLocaleString()}</div>
+                    <div class="text-[9px] text-slate-600">${percentUsed}% terpakai</div>
+                </td>
+                <td class="p-3 text-center">
+                    <div class="font-mono text-emerald-400 font-bold text-sm">${data.after.toLocaleString()}</div>
+                </td>
+                <td class="p-3 text-center">
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-rose-500 to-emerald-500 h-full transition-all" 
+                             style="width: ${((data.after / data.before) * 100).toFixed(1)}%"></div>
+                    </div>
+                    <div class="text-[9px] text-slate-500 mt-1">${((data.after / data.before) * 100).toFixed(1)}% tersisa</div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    const totalMaterialTypes = Object.keys(report.materialUsage).length;
+    const totalUsed = Object.values(report.materialUsage).reduce((sum, data) => sum + data.used, 0);
+    
+    container.innerHTML = `
+        <div class="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-6 rounded-t-xl border-b border-slate-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">LAPORAN PENGGUNAAN BAHAN</h2>
+                    <p class="text-purple-300 text-sm">Vikrama ERP - Production Report</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 uppercase font-bold">Waktu Produksi</div>
+                    <div class="text-sm text-white font-mono">${date}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400">${report.products.length}</div>
+                    <div class="text-xs text-slate-500 uppercase mt-1">Jenis Produk</div>
+                </div>
+                <div class="bg-purple-900/20 border border-purple-700/50 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-purple-400">${totalMaterialTypes}</div>
+                    <div class="text-xs text-slate-500 uppercase mt-1">Jenis Bahan</div>
+                </div>
+                <div class="bg-rose-900/20 border border-rose-700/50 rounded-lg p-4 text-center">
+                    <div class="text-3xl font-bold text-rose-400">${totalUsed.toLocaleString()}</div>
+                    <div class="text-xs text-slate-500 uppercase mt-1">Total Terpakai</div>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
+                    <i class="fas fa-boxes mr-2"></i> Produk yang Dibuat
+                </h4>
+                <div class="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                    ${productsHtml}
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i> Detail Penggunaan Bahan (Before → After)
+                </h4>
+                <div class="border border-slate-700 rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800 text-xs text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-3 text-left">Nama Bahan</th>
+                                <th class="p-3 text-center">Stok Awal</th>
+                                <th class="p-3 text-center">Digunakan</th>
+                                <th class="p-3 text-center">Stok Akhir</th>
+                                <th class="p-3 text-center">Visual</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${materialsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-yellow-400 text-xl"></i>
+                    <div class="text-xs text-slate-300">
+                        <p class="font-bold text-yellow-400 mb-1">Informasi Laporan</p>
+                        <p>Laporan ini menampilkan perbandingan stok bahan sebelum dan sesudah proses produksi. Gunakan data ini untuk monitoring inventory dan perencanaan produksi berikutnya.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-slate-800 pt-4 flex justify-between items-end text-[10px] text-slate-600">
+                <span>Generated by Vikrama ERP - Production Module</span>
+                <span>*** DOKUMEN INTERNAL ***</span>
+            </div>
+        </div>
+    `;
+};
+
+window.downloadCraftingReport = async () => {
+    const btn = document.getElementById('btnDownloadCraftingReport');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+    btn.disabled = true;
+    
+    try {
+        const element = document.getElementById('craftingReportContent');
+        const canvas = await html2canvas(element, {
+            backgroundColor: '#0f172a',
+            scale: 2,
+            logging: false
+        });
+        
+        const link = document.createElement('a');
+        link.download = `Laporan_Produksi_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        showToast("Laporan produksi berhasil disimpan!", "success");
+    } catch(err) {
+        console.error(err);
+        showAlert("Error", "Gagal menyimpan laporan: " + err.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
+window.closeSalesReportModal = () => {
+    document.getElementById('salesReportModal').classList.add('hidden');
+};
+
+window.renderSalesReport = () => {
+    const container = document.getElementById('salesReportContent');
+    if(!container || !lastSalesTransaction) return;
+    
+    const tx = lastSalesTransaction;
+    const date = tx.timestamp.toLocaleString('id-ID', { 
+        dateStyle: 'full', 
+        timeStyle: 'short' 
+    });
+    
+    // Build items table
+    let itemsHtml = tx.items.map(item => {
+        let classColor = 'bg-slate-700 text-slate-300';
+        if(item.weaponClass === 'KELAS 1') classColor = 'bg-red-900/50 text-red-300';
+        else if(item.weaponClass === 'KELAS 2') classColor = 'bg-orange-900/50 text-orange-300';
+        else if(item.weaponClass === 'KELAS 3') classColor = 'bg-yellow-900/50 text-yellow-300';
+        else if(item.weaponClass === 'KELAS 4') classColor = 'bg-green-900/50 text-green-300';
+        else if(item.weaponClass === 'AKSESORIS') classColor = 'bg-purple-900/50 text-purple-300';
+        
+        return `
+            <tr class="border-b border-slate-700">
+                <td class="p-3">
+                    <div class="font-bold text-slate-200">${item.name}</div>
+                    <span class="text-[9px] ${classColor} px-2 py-0.5 rounded font-bold uppercase mt-1 inline-block">${item.weaponClass || 'Umum'}</span>
+                </td>
+                <td class="p-3 text-center font-mono text-slate-300">${item.qty}</td>
+                <td class="p-3 text-right font-mono text-slate-400">Rp ${item.price.toLocaleString()}</td>
+                <td class="p-3 text-right font-mono text-emerald-400 font-bold">Rp ${item.subtotal.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Build limit usage summary
+    const limitHtml = `
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+            <div class="bg-red-900/20 border border-red-700/50 rounded p-2 text-center">
+                <div class="text-red-300 font-bold">${tx.limitUsed.kelas1}</div>
+                <div class="text-slate-500 text-[9px]">Kelas 1</div>
+            </div>
+            <div class="bg-orange-900/20 border border-orange-700/50 rounded p-2 text-center">
+                <div class="text-orange-300 font-bold">${tx.limitUsed.kelas2}</div>
+                <div class="text-slate-500 text-[9px]">Kelas 2</div>
+            </div>
+            <div class="bg-yellow-900/20 border border-yellow-700/50 rounded p-2 text-center">
+                <div class="text-yellow-300 font-bold">${tx.limitUsed.kelas3}</div>
+                <div class="text-slate-500 text-[9px]">Kelas 3</div>
+            </div>
+            <div class="bg-green-900/20 border border-green-700/50 rounded p-2 text-center">
+                <div class="text-green-300 font-bold">${tx.limitUsed.kelas4}</div>
+                <div class="text-slate-500 text-[9px]">Kelas 4</div>
+            </div>
+            <div class="bg-purple-900/20 border border-purple-700/50 rounded p-2 text-center">
+                <div class="text-purple-300 font-bold">${tx.limitUsed.aksesoris}</div>
+                <div class="text-slate-500 text-[9px]">Aksesoris</div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = `
+        <div class="bg-gradient-to-br from-blue-900/50 to-purple-900/50 p-6 rounded-t-xl border-b border-slate-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">BUKTI TRANSAKSI PENJUALAN</h2>
+                    <p class="text-blue-300 text-sm">Vikrama ERP - Gun Store System</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 uppercase font-bold">Waktu Transaksi</div>
+                    <div class="text-sm text-white font-mono">${date}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Seller (PIC)</p>
+                    <p class="font-bold text-white">${tx.pic}</p>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Kelompok Pembeli</p>
+                    <p class="font-bold text-white">${tx.groupName}</p>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
+                    <i class="fas fa-shopping-cart mr-2"></i> Detail Pembelian
+                </h4>
+                <div class="border border-slate-700 rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800 text-xs text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-3 text-left">Produk</th>
+                                <th class="p-3 text-center">Qty</th>
+                                <th class="p-3 text-right">Harga</th>
+                                <th class="p-3 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-bold uppercase text-sm">Total Pembayaran</span>
+                    <span class="text-3xl font-bold text-emerald-400">Rp ${tx.totalAmount.toLocaleString()}</span>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
+                    <i class="fas fa-chart-bar mr-2"></i> Pemakaian Limit Kelompok
+                </h4>
+                ${limitHtml}
+            </div>
+            
+            <div class="border-t border-slate-800 pt-4 flex justify-between items-end text-[10px] text-slate-600">
+                <span>Generated by Vikrama ERP</span>
+                <span>*** DOKUMEN SAH ***</span>
+            </div>
+        </div>
+    `;
+};
+
+window.downloadSalesReport = async () => {
+    const btn = document.getElementById('btnDownloadSalesReport');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+    btn.disabled = true;
+    
+    try {
+        const element = document.getElementById('salesReportContent');
+        const canvas = await html2canvas(element, {
+            backgroundColor: '#0f172a',
+            scale: 2,
+            logging: false
+        });
+        
+        const link = document.createElement('a');
+        link.download = `Transaksi_Penjualan_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        showToast("Laporan transaksi berhasil disimpan!", "success");
+    } catch(err) {
+        console.error(err);
+        showAlert("Error", "Gagal menyimpan laporan: " + err.message, "error");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
 
         // --- NEW FEATURE: STOCK SCREENSHOT ---
         window.downloadStockScreenshot = async () => {
@@ -3470,25 +4163,173 @@ window.deleteGroup = (groupId, groupName) => {
                 usedAksesoris: usedAcc + cartByClass['AKSESORIS']
             });
 
-            // Create log
-            const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
-            batch.set(logRef, {
-                type: 'SALES',
-                desc: `Penjualan ke ${group.name}: ${descItems.join(', ')}`,
-                amount: totalSales,
-                pic: pic,
-                groupName: group.name,
-                groupId: groupId,
-                timestamp: serverTimestamp()
-            });
+            // Create detailed log with before/after stock
+const itemsDetail = cart.map(item => {
+    const prod = productStock.find(p => p.id === item.id);
+    return {
+        name: item.name,
+        weaponClass: item.weaponClass || item.category,
+        qty: item.qty,
+        price: item.sellingPrice,
+        subtotal: item.qty * item.sellingPrice,
+        stockBefore: prod.stock,
+        stockAfter: prod.stock - item.qty
+    };
+});
+
+const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
+batch.set(logRef, {
+    type: 'SALES',
+    desc: `Penjualan ke ${group.name}: ${descItems.join(', ')}`,
+    amount: totalSales,
+    pic: pic,
+    groupName: group.name,
+    groupId: groupId,
+    timestamp: serverTimestamp(),
+    itemsDetail: itemsDetail, // NEW: Detailed items with stock info
+    limitUsed: {
+        kelas1: cartByClass['KELAS 1'],
+        kelas2: cartByClass['KELAS 2'],
+        kelas3: cartByClass['KELAS 3'],
+        kelas4: cartByClass['KELAS 4'],
+        aksesoris: cartByClass['AKSESORIS']
+    }
+});
 
             await batch.commit();
-            cart = [];
-            renderCart();
-            document.getElementById('pos-pic').value = '';
-            document.getElementById('pos-group-select').value = '';
-            showAlert("Berhasil", 'Transaksi penjualan berhasil diproses!', 'success');
+
+// TAMBAHKAN INI - Save transaction details for report
+lastSalesTransaction = {
+    timestamp: new Date(),
+    groupName: group.name,
+    groupId: groupId,
+    pic: pic,
+    items: cart.map(item => ({
+        name: item.name,
+        qty: item.qty,
+        price: item.sellingPrice,
+        subtotal: item.qty * item.sellingPrice,
+        weaponClass: item.weaponClass || item.category
+    })),
+    totalAmount: totalSales,
+    limitUsed: {
+        kelas1: cartByClass['KELAS 1'],
+        kelas2: cartByClass['KELAS 2'],
+        kelas3: cartByClass['KELAS 3'],
+        kelas4: cartByClass['KELAS 4'],
+        aksesoris: cartByClass['AKSESORIS']
+    }
+};
+
+cart = [];
+renderCart();
+document.getElementById('pos-pic').value = '';
+document.getElementById('pos-group-select').value = '';
+
+// Show success with option to view report
+showConfirm(
+    "Transaksi Berhasil! 🎉",
+    `Transaksi penjualan berhasil diproses.<br><br>` +
+    `<b>Total: Rp ${totalSales.toLocaleString()}</b><br><br>` +
+    `Apakah Anda ingin melihat laporan transaksi?`,
+    () => {
+        openSalesReportModal();
+    },
+    "success"
+);
     }, 'info');
+};
+
+window.renderSalesHistory = () => {
+    const container = document.getElementById('sales-history-container');
+    if(!container) return;
+    
+    if(salesHistory.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-500 py-10 italic">Belum ada transaksi penjualan.</div>';
+        return;
+    }
+    
+    container.innerHTML = salesHistory.map((sale, idx) => {
+        const date = sale.timestamp ? 
+            new Date(sale.timestamp.seconds*1000).toLocaleString('id-ID', { 
+                dateStyle: 'medium', 
+                timeStyle: 'short' 
+            }) : '-';
+        
+        // Build items table
+        const itemsHtml = sale.itemsDetail ? sale.itemsDetail.map(item => {
+            let classColor = 'bg-slate-700 text-slate-300';
+            if(item.weaponClass === 'KELAS 1') classColor = 'bg-red-900/50 text-red-300';
+            else if(item.weaponClass === 'KELAS 2') classColor = 'bg-orange-900/50 text-orange-300';
+            else if(item.weaponClass === 'KELAS 3') classColor = 'bg-yellow-900/50 text-yellow-300';
+            else if(item.weaponClass === 'KELAS 4') classColor = 'bg-green-900/50 text-green-300';
+            else if(item.weaponClass === 'AKSESORIS') classColor = 'bg-purple-900/50 text-purple-300';
+            
+            return `
+                <tr class="border-b border-slate-700/50 text-xs">
+                    <td class="p-2">
+                        <div class="font-bold text-slate-200">${item.name}</div>
+                        <span class="text-[8px] ${classColor} px-1.5 py-0.5 rounded mt-1 inline-block">${item.weaponClass || 'Umum'}</span>
+                    </td>
+                    <td class="p-2 text-center font-mono text-slate-300">${item.qty}</td>
+                    <td class="p-2 text-center">
+                        <div class="flex items-center justify-center gap-1 text-slate-400">
+                            <span class="font-mono">${item.stockBefore}</span>
+                            <i class="fas fa-arrow-right text-[8px]"></i>
+                            <span class="font-mono text-rose-400 font-bold">${item.stockAfter}</span>
+                        </div>
+                    </td>
+                    <td class="p-2 text-right font-mono text-emerald-400">Rp ${(item.subtotal || 0).toLocaleString()}</td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Detail tidak tersedia</td></tr>';
+        
+        return `
+            <div id="sales-record-${idx}" class="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-4">
+                <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-700">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-bold text-white">Transaksi #${salesHistory.length - idx}</h4>
+                            <span class="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-700/50">
+                                ${sale.groupName}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400">
+                            <i class="fas fa-clock mr-1"></i> ${date} | 
+                            <i class="fas fa-user ml-2 mr-1"></i> ${sale.pic}
+                        </p>
+                    </div>
+                    <button onclick="takeElementScreenshot('sales-record-${idx}', 'Transaksi_${idx}')" 
+                            class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition text-xs">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="border border-slate-700 rounded overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-900 text-[10px] text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-2">Produk</th>
+                                    <th class="p-2 text-center">Qty</th>
+                                    <th class="p-2 text-center">Stok (Before→After)</th>
+                                    <th class="p-2 text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center bg-emerald-900/20 border border-emerald-700/50 rounded p-3">
+                    <span class="text-slate-400 font-bold text-sm uppercase">Total Pembayaran</span>
+                    <span class="text-xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 };
 
         // ==========================================
@@ -3595,13 +4436,17 @@ window.deleteGroup = (groupId, groupName) => {
 
         // UI HELPERS
         window.switchTab = (tabId) => {
-            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`btn-${tabId}`).classList.add('active');
-        };
-
+    document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`btn-${tabId}`).classList.add('active');
+    
+    // NEW: Auto-render when switching to POS
+    if(tabId === 'pos') {
+        setTimeout(() => renderSalesHistory(), 100);
+    }
+};
         function showToast(msg, type='success') {
             const t = document.getElementById('toast');
             t.innerHTML = msg;
@@ -3614,12 +4459,14 @@ window.deleteGroup = (groupId, groupName) => {
 
     </script>
 </head>
+
 <body class="flex h-screen bg-slate-900">
 
     <!-- SIDEBAR -->
     <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-20 shrink-0">
         <div class="p-6 border-b border-slate-800 flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
+            <div
+                class="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
                 <i class="fas fa-network-wired text-white"></i>
             </div>
             <div>
@@ -3629,29 +4476,35 @@ window.deleteGroup = (groupId, groupName) => {
         </div>
 
         <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-            <div id="btn-warehouse" onclick="switchTab('warehouse')" class="sidebar-item active px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+            <div id="btn-warehouse" onclick="switchTab('warehouse')"
+                class="sidebar-item active px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-warehouse w-5 text-center"></i>
                 <span>Gudang Bahan</span>
             </div>
-            <div id="btn-crafting" onclick="switchTab('crafting')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+            <div id="btn-crafting" onclick="switchTab('crafting')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-hammer w-5 text-center"></i>
                 <span>Perakitan (Craft)</span>
             </div>
-            <div id="btn-pos" onclick="switchTab('pos')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+            <div id="btn-pos" onclick="switchTab('pos')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-cash-register w-5 text-center"></i>
                 <span>Toko Senjata (POS)</span>
             </div>
-            <div id="btn-weapon-db" onclick="switchTab('weapon-db')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+            <div id="btn-history" onclick="switchTab('history')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+                <i class="fas fa-history w-5 text-center"></i>
+                <span>Riwayat Global</span>
+            </div>
+            <div id="btn-weapon-db" onclick="switchTab('weapon-db')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-database w-5 text-center"></i>
                 <span>Database Senjata</span>
             </div>
-            <div id="btn-inventory" onclick="switchTab('inventory')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+            <div id="btn-inventory" onclick="switchTab('inventory')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-boxes w-5 text-center"></i>
                 <span>Inventori Senjata</span>
-            </div>
-                        <div id="btn-history" onclick="switchTab('history')" class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
-                <i class="fas fa-history w-5 text-center"></i>
-                <span>Riwayat Global</span>
             </div>
         </nav>
 
@@ -3664,7 +4517,7 @@ window.deleteGroup = (groupId, groupName) => {
     <!-- MAIN CONTENT -->
     <main class="flex-1 overflow-hidden relative bg-slate-900 text-slate-200">
         <div class="absolute inset-0 overflow-y-auto p-8 custom-scrollbar">
-            
+
             <!-- 1. WAREHOUSE VIEW -->
             <section id="warehouse" class="page-section active w-full max-w-[95%] mx-auto">
                 <header class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -3673,33 +4526,41 @@ window.deleteGroup = (groupId, groupName) => {
                         <p class="text-slate-400">Kelola stok bahan mentah untuk keperluan produksi.</p>
                     </div>
                     <div class="flex gap-3">
-                         <button onclick="openPriceModal()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        <button onclick="openPriceModal()"
+                            class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-tags mr-2"></i> Harga Bahan
-                         </button>
-                         <button onclick="document.getElementById('wh-import-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        </button>
+                        <button onclick="document.getElementById('wh-import-input').click()"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-file-excel mr-2"></i> Import Excel
-                         </button>
-                         <button onclick="openBulkModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        </button>
+                        <button onclick="openBulkModal()"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-layer-group mr-2"></i> Update Massal
-                         </button>
-                         <input type="file" id="wh-import-input" accept=".xlsx, .xls" class="hidden" onchange="importWarehouseExcel(this)">
+                        </button>
+                        <input type="file" id="wh-import-input" accept=".xlsx, .xls" class="hidden"
+                            onchange="importWarehouseExcel(this)">
                     </div>
                 </header>
 
                 <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
                     <!-- INPUT FORM -->
                     <div class="xl:col-span-1 glass-panel p-6 rounded-xl h-fit">
-                        <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center"><i class="fas fa-plus-circle mr-2"></i>Input Material</h3>
+                        <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center"><i
+                                class="fas fa-plus-circle mr-2"></i>Input Material</h3>
                         <form id="wh-form" onsubmit="saveResource(event)" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Nama Bahan</label>
-                                <input type="text" id="wh-name" placeholder="Contoh: BESI, KAYU" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none uppercase font-bold">
+                                <input type="text" id="wh-name" placeholder="Contoh: BESI, KAYU"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none uppercase font-bold">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Jumlah Masuk</label>
-                                <input type="number" id="wh-qty" placeholder="0" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                                <input type="number" id="wh-qty" placeholder="0"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
                             </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg shadow-blue-900/20">
+                            <button type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg shadow-blue-900/20">
                                 SIMPAN STOK
                             </button>
                         </form>
@@ -3713,19 +4574,25 @@ window.deleteGroup = (groupId, groupName) => {
                                     <span><i class="fas fa-boxes mr-2 text-slate-500"></i>Stok Saat Ini</span>
                                 </h3>
                                 <div class="flex gap-2">
-                                    <button id="btn-stock-screenshot" onclick="downloadStockScreenshot()" class="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Stok">
+                                    <button id="btn-stock-screenshot" onclick="downloadStockScreenshot()"
+                                        class="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600"
+                                        title="Ambil Screenshot Stok">
                                         <i class="fas fa-camera"></i>
                                     </button>
                                     <div class="relative w-64">
                                         <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
-                                        <input type="text" id="wh-list-search" onkeyup="renderWarehouseTable()" placeholder="Cari barang..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-blue-500 outline-none">
+                                        <input type="text" id="wh-list-search" onkeyup="renderWarehouseTable()"
+                                            placeholder="Cari barang..."
+                                            class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-blue-500 outline-none">
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-900/30">
+
+                            <div
+                                class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-900/30">
                                 <table class="w-full text-left text-sm relative">
-                                    <thead class="text-xs text-slate-400 uppercase bg-slate-800/90 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+                                    <thead
+                                        class="text-xs text-slate-400 uppercase bg-slate-800/90 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
                                         <tr>
                                             <th class="p-3 text-left">Nama Resource</th>
                                             <th class="p-3 text-right">Stok</th>
@@ -3733,7 +4600,10 @@ window.deleteGroup = (groupId, groupName) => {
                                         </tr>
                                     </thead>
                                     <tbody id="wh-table-body" class="divide-y divide-slate-700/50">
-                                        <tr><td colspan="3" class="p-8 text-center text-slate-500 italic"><i class="fas fa-circle-notch fa-spin mr-2"></i>Memuat data...</td></tr>
+                                        <tr>
+                                            <td colspan="3" class="p-8 text-center text-slate-500 italic"><i
+                                                    class="fas fa-circle-notch fa-spin mr-2"></i>Memuat data...</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -3745,11 +4615,12 @@ window.deleteGroup = (groupId, groupName) => {
                                 <h3 class="text-lg font-bold text-white flex items-center">
                                     <i class="fas fa-history mr-2 text-slate-500"></i>Riwayat Transaksi Gudang
                                 </h3>
-                                <button id="btn-delete-all-hist" onclick="deleteAllHistory()" class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
+                                <button id="btn-delete-all-hist" onclick="deleteAllHistory()"
+                                    class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
                                     <i class="fas fa-trash-alt mr-2"></i> Hapus Semua
                                 </button>
                             </div>
-                            
+
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-sm whitespace-nowrap">
                                     <thead class="text-xs text-slate-500 uppercase bg-slate-800/50">
@@ -3767,7 +4638,10 @@ window.deleteGroup = (groupId, groupName) => {
                                         </tr>
                                     </thead>
                                     <tbody id="wh-history-body">
-                                        <tr><td colspan="10" class="p-4 text-center text-slate-500 italic">Memuat riwayat...</td></tr>
+                                        <tr>
+                                            <td colspan="10" class="p-4 text-center text-slate-500 italic">Memuat
+                                                riwayat...</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -3784,11 +4658,14 @@ window.deleteGroup = (groupId, groupName) => {
                         <h4 class="text-xs font-bold text-slate-400 uppercase flex items-center">
                             <i class="fas fa-cubes mr-2"></i>Stok Bahan Saat Ini (Preview)
                         </h4>
-                        <button id="btn-preview-screenshot" onclick="downloadPreviewScreenshot()" class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Preview">
+                        <button id="btn-preview-screenshot" onclick="downloadPreviewScreenshot()"
+                            class="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600"
+                            title="Ambil Screenshot Preview">
                             <i class="fas fa-camera text-[10px]"></i>
                         </button>
                     </div>
-                    <div id="material-stock-preview" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+                    <div id="material-stock-preview"
+                        class="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
                         <!-- Injected via JS -->
                         <span class="text-slate-500 text-xs italic">Memuat stok...</span>
                     </div>
@@ -3800,54 +4677,75 @@ window.deleteGroup = (groupId, groupName) => {
                         <p class="text-slate-400">Ubah bahan mentah menjadi produk senjata siap jual.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                         <!-- Tombol Daftar Resep Dipindahkan ke Sini -->
-                         <button onclick="openRecipeListModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        <!-- Tombol Daftar Resep Dipindahkan ke Sini -->
+                        <button onclick="openRecipeListModal()"
+                            class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-clipboard-list mr-2"></i> Daftar Resep
-                         </button>
-                         <button onclick="openRecipeModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        </button>
+                        <button onclick="openRecipeModal()"
+                            class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-plus-circle mr-2"></i> Buat Resep Baru
-                         </button>
-                         <button onclick="document.getElementById('recipe-import-input').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        </button>
+                        <button onclick="document.getElementById('recipe-import-input').click()"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-file-excel mr-2"></i> Import Resep (Excel)
-                         </button>
-                         <input type="file" id="recipe-import-input" accept=".xlsx, .xls" class="hidden" onchange="importRecipeExcel(this)">
-                         
-                         <!-- NEW CRAFTING HISTORY BUTTON -->
-                         <button onclick="openCraftingHistory()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
+                        </button>
+                        <button onclick="openCraftingReportModal()"
+                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95"><i
+                                class="fas fa-chart-bar mr-2"></i> Lihat Laporan Produksi Terakhir</button>
+                        <input type="file" id="recipe-import-input" accept=".xlsx, .xls" class="hidden"
+                            onchange="importRecipeExcel(this)">
+
+                        <!-- NEW CRAFTING HISTORY BUTTON -->
+                        <button onclick="openCraftingHistory()"
+                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition transform hover:scale-105 active:scale-95">
                             <i class="fas fa-history mr-2"></i> Riwayat Produksi
-                         </button>
+                        </button>
+
                     </div>
                 </header>
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     <!-- RIGHT COLUMN: PRODUCTION PANEL -->
                     <div class="lg:col-span-12">
-                        <div class="glass-panel p-8 rounded-xl border-t-4 border-emerald-500 h-full flex flex-col relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                            
+                        <div
+                            class="glass-panel p-8 rounded-xl border-t-4 border-emerald-500 h-full flex flex-col relative overflow-hidden">
+                            <div
+                                class="absolute top-0 right-0 p-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none">
+                            </div>
+
                             <div class="text-center mb-6">
                                 <i class="fas fa-industry text-6xl text-slate-700 mb-2"></i>
                                 <h2 class="text-2xl font-bold text-white">Produksi Massal</h2>
-                                <p class="text-xs text-slate-400">Tambahkan beberapa item ke antrean untuk dirakit sekaligus.</p>
+                                <p class="text-xs text-slate-400">Tambahkan beberapa item ke antrean untuk dirakit
+                                    sekaligus.</p>
                             </div>
-                            
+
                             <!-- Split Panel for Queue System -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 flex-1 min-h-0">
                                 <!-- INPUT SECTION -->
                                 <div class="flex flex-col space-y-4">
                                     <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 h-full">
-                                        <h4 class="text-sm font-bold text-emerald-400 mb-4 border-b border-slate-700 pb-2">1. Pilih Produk & Jumlah</h4>
-                                        
+                                        <h4
+                                            class="text-sm font-bold text-emerald-400 mb-4 border-b border-slate-700 pb-2">
+                                            1. Pilih Produk & Jumlah</h4>
+
                                         <div class="space-y-4">
                                             <div>
-                                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Produk</label>
-                                                <select id="cr-select-product" class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm"></select>
+                                                <label
+                                                    class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Produk</label>
+                                                <select id="cr-select-product"
+                                                    class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm"></select>
                                             </div>
                                             <div>
-                                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jumlah Unit</label>
-                                                <input type="number" id="cr-qty" value="1" min="1" class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm text-center">
+                                                <label
+                                                    class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jumlah
+                                                    Unit</label>
+                                                <input type="number" id="cr-qty" value="1" min="1"
+                                                    class="w-full bg-slate-900 border border-slate-600 rounded p-2.5 text-white font-bold outline-none focus:border-emerald-500 text-sm text-center">
                                             </div>
-                                            <button onclick="addToCraftQueue()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg mt-2 flex items-center justify-center">
+                                            <button onclick="addToCraftQueue()"
+                                                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg mt-2 flex items-center justify-center">
                                                 <i class="fas fa-plus mr-2"></i> Tambahkan ke List
                                             </button>
                                         </div>
@@ -3857,23 +4755,33 @@ window.deleteGroup = (groupId, groupName) => {
                                 <!-- QUEUE & SUMMARY SECTION -->
                                 <div class="flex flex-col h-full space-y-4">
                                     <!-- Queue List -->
-                                    <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex-col min-h-0">
-                                        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                                            <h4 class="text-sm font-bold text-emerald-400">2. Antrean & Kebutuhan Per Item</h4>
-                                            <button onclick="resetCraftQueue()" class="text-[10px] text-rose-400 hover:text-white hover:bg-rose-500 px-2 py-0.5 rounded transition">Reset</button>
+                                    <div
+                                        class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex-col min-h-0">
+                                        <div
+                                            class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                                            <h4 class="text-sm font-bold text-emerald-400">2. Antrean & Kebutuhan Per
+                                                Item</h4>
+                                            <button onclick="resetCraftQueue()"
+                                                class="text-[10px] text-rose-400 hover:text-white hover:bg-rose-500 px-2 py-0.5 rounded transition">Reset</button>
                                         </div>
                                         <!-- List now accommodates detailed cards -->
                                         <div id="cr-queue-list" class="flex-1 space-y-2 mb-6">
-                                            <div class="text-center text-slate-500 text-xs italic py-4">Antrean kosong.</div>
+                                            <div class="text-center text-slate-500 text-xs italic py-4">Antrean kosong.
+                                            </div>
                                         </div>
 
                                         <!-- Resource Summary (Full, No Scroll) -->
-                                        <div id="total-estimation-wrapper" class="bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                        <div id="total-estimation-wrapper"
+                                            class="bg-slate-900 p-4 rounded-lg border border-slate-800">
                                             <div class="flex justify-between items-center mb-3">
-                                                <h4 class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
+                                                <h4
+                                                    class="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-2">
                                                     <i class="fas fa-calculator"></i> Total Estimasi Bahan
                                                 </h4>
-                                                <button onclick="takeElementScreenshot('total-estimation-wrapper', 'Estimasi_Total_Produksi')" class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition" title="Screenshot Total">
+                                                <button
+                                                    onclick="takeElementScreenshot('total-estimation-wrapper', 'Estimasi_Total_Produksi')"
+                                                    class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition"
+                                                    title="Screenshot Total">
                                                     <i class="fas fa-camera text-xs"></i>
                                                 </button>
                                             </div>
@@ -3883,7 +4791,8 @@ window.deleteGroup = (groupId, groupName) => {
                                             </div>
                                         </div>
 
-                                        <button id="btn-process-queue" onclick="processCraftQueue()" disabled class="w-full bg-slate-700 text-slate-500 font-bold p-3 rounded cursor-not-allowed transition shadow-lg mt-4">
+                                        <button id="btn-process-queue" onclick="processCraftQueue()" disabled
+                                            class="w-full bg-slate-700 text-slate-500 font-bold p-3 rounded cursor-not-allowed transition shadow-lg mt-4">
                                             ANTREAN KOSONG
                                         </button>
                                     </div>
@@ -3896,56 +4805,69 @@ window.deleteGroup = (groupId, groupName) => {
 
             <!-- 3. GUN POS VIEW -->
             <section id="pos" class="page-section max-w-7xl mx-auto">
-                    <header class="mb-8 flex justify-between items-center">
-    <div>
-        <h2 class="text-3xl font-bold text-white mb-2">Toko Senjata</h2>
-        <p class="text-slate-400">Penjualan produk jadi kepada pelanggan.</p>
-    </div>
-    <div class="flex gap-3">
-        <button onclick="openGroupManager()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
-            <i class="fas fa-users mr-2"></i> Kelola Kelompok
-        </button>
-    </div>
-</header>
+                <header class="mb-8 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Toko Senjata</h2>
+                        <p class="text-slate-400">Penjualan produk jadi kepada pelanggan.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="openSalesReportModal()"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                            <i class="fas fa-file-invoice mr-2"></i> Lihat Transaksi Terakhir
+                        </button>
+                        <button onclick="openGroupManager()"
+                            class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                            <i class="fas fa-users mr-2"></i> Kelola Kelompok
+                        </button>
+                    </div>
+                </header>
                 <div class="glass-panel rounded-xl p-4 mb-6 border-l-4 border-blue-500">
-    <div class="flex items-center gap-2 mb-2">
-        <i class="fas fa-filter text-blue-400"></i>
-        <h4 class="text-sm font-bold text-slate-300 uppercase">Filter Kategori Senjata</h4>
-    </div>
-    <div class="flex flex-wrap gap-2">
-        <button onclick="filterPosByClass('SEMUA')" class="pos-filter-btn active-filter px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition border-2 border-transparent">
-            <i class="fas fa-th mr-1"></i> SEMUA
-        </button>
-        <button onclick="filterPosByClass('KELAS 1')" class="pos-filter-btn px-4 py-2 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-300 text-xs font-bold transition border-2 border-red-700/50">
-            KELAS 1
-        </button>
-        <button onclick="filterPosByClass('KELAS 2')" class="pos-filter-btn px-4 py-2 rounded-lg bg-orange-900/30 hover:bg-orange-900/50 text-orange-300 text-xs font-bold transition border-2 border-orange-700/50">
-            KELAS 2
-        </button>
-        <button onclick="filterPosByClass('KELAS 3')" class="pos-filter-btn px-4 py-2 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-300 text-xs font-bold transition border-2 border-yellow-700/50">
-            KELAS 3
-        </button>
-        <button onclick="filterPosByClass('KELAS 4')" class="pos-filter-btn px-4 py-2 rounded-lg bg-green-900/30 hover:bg-green-900/50 text-green-300 text-xs font-bold transition border-2 border-green-700/50">
-            KELAS 4
-        </button>
-        <button onclick="filterPosByClass('AKSESORIS')" class="pos-filter-btn px-4 py-2 rounded-lg bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 text-xs font-bold transition border-2 border-purple-700/50">
-            <i class="fas fa-puzzle-piece mr-1"></i> AKSESORIS
-        </button>
-    </div>
-</div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-filter text-blue-400"></i>
+                        <h4 class="text-sm font-bold text-slate-300 uppercase">Filter Kategori Senjata</h4>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="filterPosByClass('SEMUA')"
+                            class="pos-filter-btn active-filter px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold transition border-2 border-transparent">
+                            <i class="fas fa-th mr-1"></i> SEMUA
+                        </button>
+                        <button onclick="filterPosByClass('KELAS 1')"
+                            class="pos-filter-btn px-4 py-2 rounded-lg bg-red-900/30 hover:bg-red-900/50 text-red-300 text-xs font-bold transition border-2 border-red-700/50">
+                            KELAS 1
+                        </button>
+                        <button onclick="filterPosByClass('KELAS 2')"
+                            class="pos-filter-btn px-4 py-2 rounded-lg bg-orange-900/30 hover:bg-orange-900/50 text-orange-300 text-xs font-bold transition border-2 border-orange-700/50">
+                            KELAS 2
+                        </button>
+                        <button onclick="filterPosByClass('KELAS 3')"
+                            class="pos-filter-btn px-4 py-2 rounded-lg bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-300 text-xs font-bold transition border-2 border-yellow-700/50">
+                            KELAS 3
+                        </button>
+                        <button onclick="filterPosByClass('KELAS 4')"
+                            class="pos-filter-btn px-4 py-2 rounded-lg bg-green-900/30 hover:bg-green-900/50 text-green-300 text-xs font-bold transition border-2 border-green-700/50">
+                            KELAS 4
+                        </button>
+                        <button onclick="filterPosByClass('AKSESORIS')"
+                            class="pos-filter-btn px-4 py-2 rounded-lg bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 text-xs font-bold transition border-2 border-purple-700/50">
+                            <i class="fas fa-puzzle-piece mr-1"></i> AKSESORIS
+                        </button>
+                    </div>
+                </div>
 
                 <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-280px)]">
                     <div class="flex-1 glass-panel rounded-xl p-4 overflow-y-auto custom-scrollbar">
-                         <div id="pos-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                             <div class="col-span-full text-center text-slate-500 py-20">Belum ada stok barang jadi. Lakukan Crafting dulu.</div>
-                         </div>
+                        <div id="pos-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div class="col-span-full text-center text-slate-500 py-20">Belum ada stok barang jadi.
+                                Lakukan Crafting dulu.</div>
+                        </div>
                     </div>
 
                     <div class="w-full lg:w-96 glass-panel rounded-xl flex flex-col border-l-4 border-blue-500">
                         <div class="p-4 border-b border-slate-800 bg-slate-800/50">
-                            <h3 class="font-bold text-white flex items-center"><i class="fas fa-shopping-cart mr-2"></i>Keranjang</h3>
+                            <h3 class="font-bold text-white flex items-center"><i
+                                    class="fas fa-shopping-cart mr-2"></i>Keranjang</h3>
                         </div>
-                        
+
                         <div id="pos-cart-items" class="flex-1 overflow-y-auto p-4 space-y-2">
                             <p class="text-center text-slate-500 text-sm mt-10">Keranjang kosong.</p>
                         </div>
@@ -3953,11 +4875,13 @@ window.deleteGroup = (groupId, groupName) => {
                         <div class="p-4 bg-slate-800/80 mt-auto border-t border-slate-700">
                             <div class="mb-3">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Nama Seller (PIC)</label>
-                                <input type="text" id="pos-pic" placeholder="Nama Anda" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white mt-1">
+                                <input type="text" id="pos-pic" placeholder="Nama Anda"
+                                    class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white mt-1">
                             </div>
                             <div class="mb-3">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase">Kelompok Pembeli</label>
-                                <select id="pos-group-select" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white mt-1">
+                                <select id="pos-group-select"
+                                    class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-sm text-white mt-1">
                                     <option value="">-- Pilih Kelompok --</option>
                                 </select>
                             </div>
@@ -3965,15 +4889,32 @@ window.deleteGroup = (groupId, groupName) => {
                                 <span class="text-slate-400 text-sm">Total Tagihan:</span>
                                 <span id="pos-total" class="text-2xl font-bold text-emerald-400">Rp 0</span>
                             </div>
-                            <button id="btn-checkout" onclick="checkout()" disabled class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-lg shadow-lg transition">
+                            <button id="btn-checkout" onclick="checkout()" disabled
+                                class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 rounded-lg shadow-lg transition">
                                 PROSES TRANSAKSI
                             </button>
                         </div>
                     </div>
                 </div>
+                <!-- NEW: SALES HISTORY SECTION -->
+                <div class="mt-8 glass-panel rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-white flex items-center">
+                            <i class="fas fa-history mr-2 text-blue-400"></i>Riwayat Transaksi Penjualan
+                        </h3>
+                        <button onclick="renderSalesHistory()"
+                            class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div id="sales-history-container" class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                        <div class="text-center text-slate-500 py-10 italic">Memuat riwayat...</div>
+                    </div>
+                </div>
             </section>
 
-             <!-- 4. HISTORY VIEW -->
+            <!-- 4. HISTORY VIEW -->
             <section id="history" class="page-section max-w-6xl mx-auto">
                 <header class="mb-8">
                     <h2 class="text-3xl font-bold text-white mb-2">Jejak Aktivitas Global</h2>
@@ -3996,7 +4937,7 @@ window.deleteGroup = (groupId, groupName) => {
                     </table>
                 </div>
             </section>
-             <!-- 5. WEAPON DATABASE VIEW -->
+            <!-- 5. WEAPON DATABASE VIEW -->
             <section id="weapon-db" class="page-section max-w-7xl mx-auto">
                 <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -4004,19 +4945,24 @@ window.deleteGroup = (groupId, groupName) => {
                         <p class="text-slate-400">Kelola master data senjata: nama, kelas, harga modal & jual.</p>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="openAddWeaponModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <button onclick="openAddWeaponModal()"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-plus-circle mr-2"></i> Tambah Manual
                         </button>
-                        <button onclick="openProductClassManager()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <button onclick="openProductClassManager()"
+                            class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-layer-group mr-2"></i> Kelola Kelas
                         </button>
-                        <button onclick="syncWeaponToProducts()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <button onclick="syncWeaponToProducts()"
+                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-sync mr-2"></i> Sync ke POS
                         </button>
-                        <button onclick="document.getElementById('weapon-db-import').click()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <button onclick="document.getElementById('weapon-db-import').click()"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-file-excel mr-2"></i> Import Excel
                         </button>
-                        <input type="file" id="weapon-db-import" accept=".xlsx, .xls" class="hidden" onchange="importWeaponDatabase(this)">
+                        <input type="file" id="weapon-db-import" accept=".xlsx, .xls" class="hidden"
+                            onchange="importWeaponDatabase(this)">
                     </div>
                 </header>
 
@@ -4024,10 +4970,13 @@ window.deleteGroup = (groupId, groupName) => {
                 <div class="glass-panel p-4 rounded-xl mb-6 flex flex-col md:flex-row gap-3">
                     <div class="flex-1 relative">
                         <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
-                        <input type="text" id="weapon-db-search" onkeyup="renderWeaponDatabase()" placeholder="Cari nama senjata..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                        <input type="text" id="weapon-db-search" onkeyup="renderWeaponDatabase()"
+                            placeholder="Cari nama senjata..."
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                     </div>
                     <div class="w-full md:w-64">
-                        <select id="weapon-db-filter-class" onchange="renderWeaponDatabase()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                        <select id="weapon-db-filter-class" onchange="renderWeaponDatabase()"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                             <option value="SEMUA">🔍 Semua Kelas</option>
                             <option value="KELAS 1">🔴 Kelas 1</option>
                             <option value="KELAS 2">🟠 Kelas 2</option>
@@ -4042,11 +4991,12 @@ window.deleteGroup = (groupId, groupName) => {
                 <div class="glass-panel p-6 rounded-xl">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold text-white">Data Senjata</h3>
-                        <button onclick="deleteAllWeaponDatabase()" class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
+                        <button onclick="deleteAllWeaponDatabase()"
+                            class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1.5 rounded-lg border border-rose-600/30 transition flex items-center">
                             <i class="fas fa-trash-alt mr-2"></i> Hapus Semua
                         </button>
                     </div>
-                    
+
                     <div class="overflow-x-auto border border-slate-700 rounded-lg">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold">
@@ -4059,7 +5009,9 @@ window.deleteGroup = (groupId, groupName) => {
                                 </tr>
                             </thead>
                             <tbody id="weapon-db-table-body">
-                                <tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Memuat data...</td></tr>
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-slate-500 italic">Memuat data...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -4076,9 +5028,10 @@ window.deleteGroup = (groupId, groupName) => {
                             <li>Harga modal dihitung otomatis dari <b>Resep Produksi</b> × <b>Harga Bahan</b></li>
                             <li>Data terintegrasi dengan modul Gudang Bahan dan POS</li>
                             <li>Perubahan harga bahan akan otomatis update perhitungan</li>
-                            <li>Item dengan harga auto-calculated ditandai <span class="text-blue-400"><i class="fas fa-calculator"></i></span></li>
+                            <li>Item dengan harga auto-calculated ditandai <span class="text-blue-400"><i
+                                        class="fas fa-calculator"></i></span></li>
                         </ul>
-                        
+
                         <p class="mt-3">📋 <b>Format Excel untuk Import (Opsional):</b></p>
                         <ul class="list-disc list-inside ml-4 space-y-0.5">
                             <li><b>Nama Senjata</b> / Name / Nama</li>
@@ -4089,7 +5042,7 @@ window.deleteGroup = (groupId, groupName) => {
                     </div>
                 </div>
             </section>
-             <!-- 6. INVENTORY VIEW (NEW) -->
+            <!-- 6. INVENTORY VIEW (NEW) -->
             <section id="inventory" class="page-section max-w-7xl mx-auto">
                 <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -4097,7 +5050,8 @@ window.deleteGroup = (groupId, groupName) => {
                         <p class="text-slate-400">Kelola stok produk jadi yang siap dijual.</p>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="downloadInventoryReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <button onclick="downloadInventoryReport()"
+                            class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-file-download mr-2"></i> Laporan Stok
                         </button>
                     </div>
@@ -4147,10 +5101,13 @@ window.deleteGroup = (groupId, groupName) => {
                 <div class="glass-panel p-4 rounded-xl mb-6 flex flex-col md:flex-row gap-3">
                     <div class="flex-1 relative">
                         <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
-                        <input type="text" id="inventory-search" onkeyup="renderInventoryTable()" placeholder="Cari nama senjata..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                        <input type="text" id="inventory-search" onkeyup="renderInventoryTable()"
+                            placeholder="Cari nama senjata..."
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                     </div>
                     <div class="w-full md:w-64">
-                        <select id="inventory-filter-class" onchange="renderInventoryTable()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                        <select id="inventory-filter-class" onchange="renderInventoryTable()"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                             <option value="SEMUA">🔍 Semua Kelas</option>
                             <option value="KELAS 1">🔴 Kelas 1</option>
                             <option value="KELAS 2">🟠 Kelas 2</option>
@@ -4160,106 +5117,122 @@ window.deleteGroup = (groupId, groupName) => {
                         </select>
                     </div>
                     <div class="w-full md:w-48">
-                        <select id="inventory-filter-stock" onchange="renderInventoryTable()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
+                        <select id="inventory-filter-stock" onchange="renderInventoryTable()"
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                             <option value="SEMUA">📦 Semua Stok</option>
                             <option value="READY">✅ Tersedia (>0)</option>
                             <option value="EMPTY">❌ Habis (=0)</option>
-                            <option value="LOW">⚠️ Sedikit (<5)</option>
-                        </select>
-                    </div>
-                </div>
+                            <option value="LOW">⚠️ Sedikit (<5)</option> </select> </div> </div> <!-- Table -->
+                                    <div class="glass-panel p-6 rounded-xl">
+                                        <div class="overflow-x-auto border border-slate-700 rounded-lg">
+                                            <table class="w-full text-left text-sm">
+                                                <thead
+                                                    class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
+                                                    <tr>
+                                                        <th class="p-3">Nama Senjata</th>
+                                                        <th class="p-3 text-center">Kelas</th>
+                                                        <th class="p-3 text-right">Stok</th>
+                                                        <th class="p-3 text-right">Harga Modal</th>
+                                                        <th class="p-3 text-right">Harga Jual</th>
+                                                        <th class="p-3 text-right">Profit/Unit</th>
+                                                        <th class="p-3 text-right">Nilai Total</th>
+                                                        <th class="p-3 text-center">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="inventory-table-body">
+                                                    <tr>
+                                                        <td colspan="8" class="p-8 text-center text-slate-500 italic">
+                                                            Memuat data...</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                <!-- Table -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <div class="overflow-x-auto border border-slate-700 rounded-lg">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
-                                <tr>
-                                    <th class="p-3">Nama Senjata</th>
-                                    <th class="p-3 text-center">Kelas</th>
-                                    <th class="p-3 text-right">Stok</th>
-                                    <th class="p-3 text-right">Harga Modal</th>
-                                    <th class="p-3 text-right">Harga Jual</th>
-                                    <th class="p-3 text-right">Profit/Unit</th>
-                                    <th class="p-3 text-right">Nilai Total</th>
-                                    <th class="p-3 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventory-table-body">
-                                <tr><td colspan="8" class="p-8 text-center text-slate-500 italic">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Info Panel -->
-                <div class="mt-6 glass-panel p-4 rounded-xl border-l-4 border-rose-500">
-                    <h4 class="text-sm font-bold text-rose-400 mb-2 flex items-center">
-                        <i class="fas fa-exclamation-triangle mr-2"></i> Peringatan
-                    </h4>
-                    <p class="text-xs text-slate-400">
-                        <b>Menghapus produk dari Inventori Senjata:</b>
-                    </p>
-                    <ul class="list-disc list-inside ml-4 text-xs text-slate-400 mt-2 space-y-1">
-                        <li>Akan menghapus produk secara permanen dari sistem</li>
-                        <li>Produk akan hilang dari <b>Toko Senjata (POS)</b></li>
-                        <li>Resep produksi tetap tersimpan dan bisa diproduksi ulang</li>
-                        <li>Riwayat transaksi penjualan tetap tersimpan</li>
-                    </ul>
-                </div>
+                                    <!-- Info Panel -->
+                                    <div class="mt-6 glass-panel p-4 rounded-xl border-l-4 border-rose-500">
+                                        <h4 class="text-sm font-bold text-rose-400 mb-2 flex items-center">
+                                            <i class="fas fa-exclamation-triangle mr-2"></i> Peringatan
+                                        </h4>
+                                        <p class="text-xs text-slate-400">
+                                            <b>Menghapus produk dari Inventori Senjata:</b>
+                                        </p>
+                                        <ul class="list-disc list-inside ml-4 text-xs text-slate-400 mt-2 space-y-1">
+                                            <li>Akan menghapus produk secara permanen dari sistem</li>
+                                            <li>Produk akan hilang dari <b>Toko Senjata (POS)</b></li>
+                                            <li>Resep produksi tetap tersimpan dan bisa diproduksi ulang</li>
+                                            <li>Riwayat transaksi penjualan tetap tersimpan</li>
+                                        </ul>
+                                    </div>
             </section>
         </div>
     </main>
 
     <!-- NEW UNIVERSAL MODAL -->
-    <div id="universal-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full p-6 transform transition-all scale-100">
+    <div id="universal-modal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full p-6 transform transition-all scale-100">
             <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Action</h3>
             <p id="modal-desc" class="text-slate-400 text-sm mb-4 hidden"></p>
-            
+
             <div id="modal-inputs" class="space-y-3">
-                 <div id="input-group-name" class="hidden">
+                <div id="input-group-name" class="hidden">
                     <label class="text-[10px] uppercase font-bold text-slate-500">Nama Baru</label>
-                    <input type="text" id="modal-input-name" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
-                 </div>
-                 <div id="input-group-qty">
+                    <input type="text" id="modal-input-name"
+                        class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
+                </div>
+                <div id="input-group-qty">
                     <label id="label-qty" class="text-[10px] uppercase font-bold text-slate-500">Jumlah</label>
-                    <input type="number" id="modal-input-qty" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
-                 </div>
-                 <div id="input-group-pic" class="hidden">
+                    <input type="number" id="modal-input-qty"
+                        class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
+                </div>
+                <div id="input-group-pic" class="hidden">
                     <label class="text-[10px] uppercase font-bold text-slate-500">PIC (Penanggung Jawab)</label>
-                    <input type="text" id="modal-input-pic" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
-                 </div>
-                 <div id="input-group-pic" class="hidden"> <!-- Duplicate ID removed in logic, simplified -->
+                    <input type="text" id="modal-input-pic"
+                        class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
+                </div>
+                <div id="input-group-pic" class="hidden">
+                    <!-- Duplicate ID removed in logic, simplified -->
                     <label class="text-[10px] uppercase font-bold text-slate-500">Keterangan</label>
-                    <input type="text" id="modal-input-note" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
-                 </div>
-                 <div id="input-group-img" class="hidden">
+                    <input type="text" id="modal-input-note"
+                        class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white outline-none focus:border-blue-500">
+                </div>
+                <div id="input-group-img" class="hidden">
                     <label class="text-[10px] uppercase font-bold text-slate-500">Bukti Foto</label>
-                    <input type="file" id="modal-input-img" accept="image/*" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-300 hover:file:bg-slate-600">
-                 </div>
+                    <input type="file" id="modal-input-img" accept="image/*"
+                        class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-300 hover:file:bg-slate-600">
+                </div>
             </div>
 
             <div class="flex gap-3 mt-6">
-                <button onclick="closeModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
-                <button id="btn-modal-confirm" onclick="confirmModalAction()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
+                <button onclick="closeModal()"
+                    class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                <button id="btn-modal-confirm" onclick="confirmModalAction()"
+                    class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
             </div>
         </div>
     </div>
 
     <!-- NEW RECIPE CREATION MODAL -->
-    <div id="recipeModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale relative">
-            <button onclick="closeRecipeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i class="fas fa-times"></i></button>
-            
-            <h3 id="recipeModalTitle" class="text-xl font-bold text-purple-400 mb-6 flex items-center"><i class="fas fa-scroll mr-3"></i>Buat Resep Baru</h3>
-            
+    <div id="recipeModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale relative">
+            <button onclick="closeRecipeModal()"
+                class="absolute top-4 right-4 text-slate-400 hover:text-white transition"><i
+                    class="fas fa-times"></i></button>
+
+            <h3 id="recipeModalTitle" class="text-xl font-bold text-purple-400 mb-6 flex items-center"><i
+                    class="fas fa-scroll mr-3"></i>Buat Resep Baru</h3>
+
             <form id="cr-form" onsubmit="saveRecipe(event)" class="space-y-5">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Produk</label>
-                    <input type="text" id="cr-name" placeholder="CONTOH: AK-47" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white font-bold uppercase outline-none focus:border-purple-500 transition">
+                    <input type="text" id="cr-name" placeholder="CONTOH: AK-47"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white font-bold uppercase outline-none focus:border-purple-500 transition">
                 </div>
-                
+
                 <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
                     <p class="text-[10px] font-bold text-slate-500 uppercase mb-3 flex justify-between">
                         <span>Komposisi Bahan</span>
@@ -4269,8 +5242,9 @@ window.deleteGroup = (groupId, groupName) => {
                         <!-- Inputs injected via JS -->
                     </div>
                 </div>
-                
-                <button class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-purple-900/20">
+
+                <button
+                    class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-purple-900/20">
                     SIMPAN RESEP
                 </button>
             </form>
@@ -4278,72 +5252,90 @@ window.deleteGroup = (groupId, groupName) => {
     </div>
 
     <!-- NEW RECIPE LIST MODAL -->
-    <div id="recipeListModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
+    <div id="recipeListModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-purple-400 flex items-center">
                     <i class="fas fa-clipboard-list mr-3"></i>Daftar Resep Aktif
                 </h3>
                 <div class="flex items-center gap-2">
-                    <button onclick="downloadRecipeScreenshot()" class="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600" title="Ambil Screenshot Resep" id="btn-recipe-screenshot">
+                    <button onclick="downloadRecipeScreenshot()"
+                        class="w-8 h-8 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center justify-center transition border border-slate-600"
+                        title="Ambil Screenshot Resep" id="btn-recipe-screenshot">
                         <i class="fas fa-camera text-xs"></i>
                     </button>
-                    <button onclick="closeRecipeListModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                    <button onclick="closeRecipeListModal()" class="text-slate-400 hover:text-white transition"><i
+                            class="fas fa-times text-xl"></i></button>
                 </div>
             </div>
-            
-            <div id="recipeListModalContent" class="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min">
+
+            <div id="recipeListModalContent"
+                class="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min">
                 <!-- Cards injected via JS -->
             </div>
         </div>
     </div>
 
     <!-- NEW CRAFTING HISTORY MODAL -->
-    <div id="craftingHistoryModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-cyan-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[85vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
+    <div id="craftingHistoryModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-cyan-500/50 rounded-xl shadow-2xl w-full max-w-2xl h-[85vh] p-6 transform transition-all scale-100 modal-scale flex flex-col relative">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-cyan-400 flex items-center">
                     <i class="fas fa-history mr-3"></i>Riwayat Produksi
                 </h3>
-                <button onclick="closeCraftingHistory()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closeCraftingHistory()" class="text-slate-400 hover:text-white transition"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
-            
+
             <div id="craftingHistoryContent" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
                 <div class="text-center text-slate-500 text-sm py-10 italic">Memuat riwayat...</div>
             </div>
         </div>
     </div>
-    
+
     <!-- NEW TRANSACTION DETAIL MODAL -->
-    <div id="transactionDetailModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-600 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
+    <div id="transactionDetailModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-600 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
                 <h3 id="td-title" class="text-lg font-bold text-white">Detail Transaksi</h3>
-                <button onclick="closeTransactionDetailModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closeTransactionDetailModal()" class="text-slate-400 hover:text-white transition"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
             <div id="td-content" class="flex-1 overflow-y-auto custom-scrollbar"></div>
         </div>
     </div>
 
     <!-- NEW PRICE LIST MODAL -->
-    <div id="priceModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-yellow-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale relative flex flex-col max-h-[85vh]">
+    <div id="priceModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-yellow-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 modal-scale relative flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-yellow-500 flex items-center">
                     <i class="fas fa-tags mr-3"></i>Harga Modal Bahan
                 </h3>
-                <button onclick="closePriceModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closePriceModal()" class="text-slate-400 hover:text-white transition"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
-            
+
             <div class="flex gap-2 mb-4">
                 <div class="relative flex-1">
                     <i class="fas fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
-                    <input type="text" id="price-search" onkeyup="renderPriceListTable()" placeholder="Cari bahan..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-yellow-500 outline-none">
+                    <input type="text" id="price-search" onkeyup="renderPriceListTable()" placeholder="Cari bahan..."
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-yellow-500 outline-none">
                 </div>
-                <button onclick="document.getElementById('price-import-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-bold text-xs shadow flex items-center">
+                <button onclick="document.getElementById('price-import-input').click()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-bold text-xs shadow flex items-center">
                     <i class="fas fa-file-upload mr-2"></i> Import Excel
                 </button>
-                <input type="file" id="price-import-input" accept=".xlsx, .xls" class="hidden" onchange="importPriceExcel(this)">
+                <input type="file" id="price-import-input" accept=".xlsx, .xls" class="hidden"
+                    onchange="importPriceExcel(this)">
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
@@ -4361,7 +5353,7 @@ window.deleteGroup = (groupId, groupName) => {
                     </tbody>
                 </table>
             </div>
-            
+
             <div class="mt-4 pt-3 border-t border-slate-800 text-center">
                 <p class="text-[10px] text-slate-500 italic">Format Excel: Kolom "Nama Bahan" & "Harga Modal"</p>
             </div>
@@ -4369,41 +5361,53 @@ window.deleteGroup = (groupId, groupName) => {
     </div>
 
     <!-- NEW EDIT PRICE MODAL -->
-    <div id="editPriceModal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 modal-scale">
+    <div id="editPriceModal"
+        class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 modal-scale">
             <h3 class="text-lg font-bold text-white mb-4">Edit Harga Bahan</h3>
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Nama Bahan</label>
-                    <input type="text" id="edit-price-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-400 text-sm font-bold" readonly>
+                    <input type="text" id="edit-price-name"
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-400 text-sm font-bold"
+                        readonly>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Harga Modal Baru (Rp)</label>
-                    <input type="number" id="edit-price-value" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
+                    <input type="number" id="edit-price-value"
+                        class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
                 </div>
             </div>
             <div class="flex gap-3 mt-6">
-                <button onclick="closeEditPriceModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
-                <button onclick="savePriceUpdate()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
+                <button onclick="closeEditPriceModal()"
+                    class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                <button onclick="savePriceUpdate()"
+                    class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">Simpan</button>
             </div>
         </div>
     </div>
 
-     <!-- NEW PRODUCT CLASS MANAGER MODAL -->
-    <div id="productClassModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-3xl p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
+    <!-- NEW PRODUCT CLASS MANAGER MODAL -->
+    <div id="productClassModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-3xl p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-purple-400 flex items-center">
                     <i class="fas fa-layer-group mr-3"></i>Kelola Kelas Produk
                 </h3>
-                <button onclick="closeProductClassModal()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="closeProductClassModal()" class="text-slate-400 hover:text-white transition"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
-            
+
             <!-- Search Bar -->
             <div class="mb-4">
                 <div class="relative">
                     <i class="fas fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
-                    <input type="text" id="product-class-search" onkeyup="renderProductClassTable()" placeholder="Cari produk..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-purple-500 outline-none">
+                    <input type="text" id="product-class-search" onkeyup="renderProductClassTable()"
+                        placeholder="Cari produk..."
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 p-2 text-sm text-white focus:border-purple-500 outline-none">
                 </div>
             </div>
 
@@ -4411,14 +5415,24 @@ window.deleteGroup = (groupId, groupName) => {
             <div class="mb-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
                 <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Legenda Kelas:</p>
                 <div class="flex flex-wrap gap-2">
-                    <span class="text-[9px] bg-red-900/50 text-red-300 border border-red-700 px-2 py-0.5 rounded font-bold">KELAS 1 - Militer Berat</span>
-                    <span class="text-[9px] bg-orange-900/50 text-orange-300 border border-orange-700 px-2 py-0.5 rounded font-bold">KELAS 2 - Militer Menengah</span>
-                    <span class="text-[9px] bg-yellow-900/50 text-yellow-300 border border-yellow-700 px-2 py-0.5 rounded font-bold">KELAS 3 - Sipil Berat</span>
-                    <span class="text-[9px] bg-green-900/50 text-green-300 border border-green-700 px-2 py-0.5 rounded font-bold">KELAS 4 - Sipil Standar</span>
-                    <span class="text-[9px] bg-purple-900/50 text-purple-300 border border-purple-700 px-2 py-0.5 rounded font-bold">AKSESORIS - Tambahan</span>
+                    <span
+                        class="text-[9px] bg-red-900/50 text-red-300 border border-red-700 px-2 py-0.5 rounded font-bold">KELAS
+                        1 - Militer Berat</span>
+                    <span
+                        class="text-[9px] bg-orange-900/50 text-orange-300 border border-orange-700 px-2 py-0.5 rounded font-bold">KELAS
+                        2 - Militer Menengah</span>
+                    <span
+                        class="text-[9px] bg-yellow-900/50 text-yellow-300 border border-yellow-700 px-2 py-0.5 rounded font-bold">KELAS
+                        3 - Sipil Berat</span>
+                    <span
+                        class="text-[9px] bg-green-900/50 text-green-300 border border-green-700 px-2 py-0.5 rounded font-bold">KELAS
+                        4 - Sipil Standar</span>
+                    <span
+                        class="text-[9px] bg-purple-900/50 text-purple-300 border border-purple-700 px-2 py-0.5 rounded font-bold">AKSESORIS
+                        - Tambahan</span>
                 </div>
             </div>
-            
+
             <!-- Product Table -->
             <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
                 <table class="w-full text-left">
@@ -4430,7 +5444,9 @@ window.deleteGroup = (groupId, groupName) => {
                         </tr>
                     </thead>
                     <tbody id="product-class-table-body" class="divide-y divide-slate-700/50">
-                        <tr><td colspan="3" class="p-4 text-center text-slate-500 italic">Memuat data...</td></tr>
+                        <tr>
+                            <td colspan="3" class="p-4 text-center text-slate-500 italic">Memuat data...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -4443,18 +5459,23 @@ window.deleteGroup = (groupId, groupName) => {
     </div>
 
     <!-- EDIT PRODUCT CLASS MODAL -->
-    <div id="editProductClassModal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
+    <div id="editProductClassModal"
+        class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
             <h3 class="text-lg font-bold text-white mb-4">Ubah Kelas Produk</h3>
             <div class="space-y-4">
                 <input type="hidden" id="edit-class-product-id">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Nama Produk</label>
-                    <div id="edit-class-product-name" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-200 text-sm font-bold"></div>
+                    <div id="edit-class-product-name"
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-2.5 text-slate-200 text-sm font-bold">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Pilih Kelas Baru</label>
-                    <select id="edit-class-select" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none font-bold">
+                    <select id="edit-class-select"
+                        class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none font-bold">
                         <option value="">-- Pilih Kelas --</option>
                         <option value="KELAS 1">🔴 KELAS 1 - Militer Berat</option>
                         <option value="KELAS 2">🟠 KELAS 2 - Militer Menengah</option>
@@ -4465,28 +5486,34 @@ window.deleteGroup = (groupId, groupName) => {
                 </div>
             </div>
             <div class="flex gap-3 mt-6">
-                <button onclick="closeEditProductClassModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
-                <button onclick="saveProductClass()" class="flex-1 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 font-bold transition shadow-lg">
+                <button onclick="closeEditProductClassModal()"
+                    class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                <button onclick="saveProductClass()"
+                    class="flex-1 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 font-bold transition shadow-lg">
                     <i class="fas fa-save mr-2"></i> Simpan
                 </button>
             </div>
         </div>
     </div>
     <!-- ADD/EDIT WEAPON MODAL -->
-    <div id="addWeaponModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
+    <div id="addWeaponModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 modal-scale">
             <h3 id="weapon-modal-title" class="text-lg font-bold text-white mb-4">Tambah Senjata Baru</h3>
             <form id="weapon-form" onsubmit="saveWeaponData(event)" class="space-y-4">
                 <input type="hidden" id="weapon-id-input">
-                
+
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Nama Senjata</label>
-                    <input type="text" id="weapon-name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none uppercase font-bold">
+                    <input type="text" id="weapon-name" required
+                        class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none uppercase font-bold">
                 </div>
-                
+
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">Kelas Senjata</label>
-                    <select id="weapon-class" required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none font-bold">
+                    <select id="weapon-class" required
+                        class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none font-bold">
                         <option value="">-- Pilih Kelas --</option>
                         <option value="KELAS 1">🔴 KELAS 1 - Militer Berat</option>
                         <option value="KELAS 2">🟠 KELAS 2 - Militer Menengah</option>
@@ -4495,21 +5522,25 @@ window.deleteGroup = (groupId, groupName) => {
                         <option value="AKSESORIS">🟣 AKSESORIS - Tambahan</option>
                     </select>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">Harga Modal (Rp)</label>
-                        <input type="number" id="weapon-cost" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
+                        <input type="number" id="weapon-cost" min="0"
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-yellow-500 outline-none font-mono">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">Harga Jual (Rp)</label>
-                        <input type="number" id="weapon-sell" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-emerald-500 outline-none font-mono">
+                        <input type="number" id="weapon-sell" min="0"
+                            class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-emerald-500 outline-none font-mono">
                     </div>
                 </div>
-                
+
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="closeAddWeaponModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
-                    <button type="submit" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">
+                    <button type="button" onclick="closeAddWeaponModal()"
+                        class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                    <button type="submit"
+                        class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 font-bold transition shadow-lg">
                         <i class="fas fa-save mr-2"></i> Simpan
                     </button>
                 </div>
@@ -4517,28 +5548,37 @@ window.deleteGroup = (groupId, groupName) => {
         </div>
     </div>
     <!-- BULK UPDATE MODAL REFINED -->
-    <div id="bulkUpdateModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="bulkUpdateModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 m-auto modal-scale flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-layer-group mr-2 text-indigo-600"></i>Update Stok Massal</h3>
-                <button onclick="document.getElementById('bulkUpdateModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-times text-xl"></i></button>
+                <h3 class="text-xl font-bold text-gray-800"><i
+                        class="fas fa-layer-group mr-2 text-indigo-600"></i>Update Stok Massal</h3>
+                <button onclick="document.getElementById('bulkUpdateModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-times text-xl"></i></button>
             </div>
-            
+
             <!-- Global Settings for Batch -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
                 <div>
-                     <label class="block text-xs font-bold text-gray-600 mb-1">PIC (Penanggung Jawab)</label>
-                     <input type="text" id="bulkPIC" class="w-full px-3 py-2 border rounded-lg text-sm text-slate-800" placeholder="Nama PIC">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">PIC (Penanggung Jawab)</label>
+                    <input type="text" id="bulkPIC" class="w-full px-3 py-2 border rounded-lg text-sm text-slate-800"
+                        placeholder="Nama PIC">
                 </div>
                 <div>
-                     <label class="block text-xs font-bold text-gray-600 mb-1">Keterangan / Catatan Batch</label>
-                     <input type="text" id="bulkDesc" class="w-full px-3 py-2 border rounded-lg text-sm text-slate-800" placeholder="Contoh: Opname Akhir Tahun">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Keterangan / Catatan Batch</label>
+                    <input type="text" id="bulkDesc" class="w-full px-3 py-2 border rounded-lg text-sm text-slate-800"
+                        placeholder="Contoh: Opname Akhir Tahun">
                 </div>
-                 <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Bukti Foto (Opsional - Berlaku untuk semua)</label>
-                    <input type="file" id="bulkImage" onchange="handleFileSelect(this)" accept="image/*" class="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 text-slate-600">
-                    <div id="file-status-indicator" class="hidden mt-1 text-xs text-green-600 font-bold flex items-center">
-                        <i class="fas fa-check-circle mr-1"></i> File dipilih: <span id="file-name-display" class="font-normal text-slate-600 ml-1"></span>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Bukti Foto (Opsional - Berlaku untuk
+                        semua)</label>
+                    <input type="file" id="bulkImage" onchange="handleFileSelect(this)" accept="image/*"
+                        class="text-xs w-full file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 text-slate-600">
+                    <div id="file-status-indicator"
+                        class="hidden mt-1 text-xs text-green-600 font-bold flex items-center">
+                        <i class="fas fa-check-circle mr-1"></i> File dipilih: <span id="file-name-display"
+                            class="font-normal text-slate-600 ml-1"></span>
                     </div>
                 </div>
             </div>
@@ -4549,7 +5589,9 @@ window.deleteGroup = (groupId, groupName) => {
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                         <i class="fas fa-search text-gray-400"></i>
                     </span>
-                    <input type="text" id="bulkSearchInput" onkeyup="filterBulkItems()" placeholder="Cari nama resource..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition placeholder-gray-400 text-slate-800">
+                    <input type="text" id="bulkSearchInput" onkeyup="filterBulkItems()"
+                        placeholder="Cari nama resource..."
+                        class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition placeholder-gray-400 text-slate-800">
                 </div>
             </div>
 
@@ -4573,18 +5615,24 @@ window.deleteGroup = (groupId, groupName) => {
             <div class="flex justify-between items-center pt-2 border-t">
                 <div class="text-xs text-gray-500 italic">* Kosongkan jumlah jika item tidak diupdate.</div>
                 <div class="flex space-x-3">
-                    <button onclick="document.getElementById('bulkUpdateModal').classList.add('hidden')" class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium">Batal</button>
-                    <button id="btnBulkConfirm" onclick="handleBulkSubmit()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow hover:bg-indigo-700 text-sm transition">Proses Semua</button>
+                    <button onclick="document.getElementById('bulkUpdateModal').classList.add('hidden')"
+                        class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium">Batal</button>
+                    <button id="btnBulkConfirm" onclick="handleBulkSubmit()"
+                        class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow hover:bg-indigo-700 text-sm transition">Proses
+                        Semua</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- CUSTOM CARD ALERT (REPLACEMENT FOR DEFAULT ALERTS) -->
-    <div id="custom-alert-modal" class="fixed inset-0 z-[120] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full p-8 transform transition-all scale-100 modal-scale">
+    <div id="custom-alert-modal"
+        class="fixed inset-0 z-[120] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-sm w-full p-8 transform transition-all scale-100 modal-scale">
             <div class="text-center">
-                <div id="alert-icon-wrapper" class="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto">
+                <div id="alert-icon-wrapper"
+                    class="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors mx-auto">
                     <i id="alert-icon" class="text-3xl"></i>
                 </div>
                 <h3 id="alert-title" class="text-xl font-bold text-white mb-2 tracking-wide"></h3>
@@ -4597,25 +5645,30 @@ window.deleteGroup = (groupId, groupName) => {
     </div>
 
     <!-- IMAGE PREVIEW MODAL -->
-    <div id="image-preview-modal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur flex items-center justify-center p-4" onclick="closeImagePreview()">
+    <div id="image-preview-modal"
+        class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur flex items-center justify-center p-4"
+        onclick="closeImagePreview()">
         <img id="preview-img-content" class="max-w-full max-h-screen rounded shadow-2xl" src="">
         <p class="absolute bottom-5 text-white/50 text-sm">Klik di mana saja untuk menutup</p>
     </div>
 
     <!-- MODAL PREVIEW REPORT (STRUK) -->
-    <div id="reportModal" class="fixed inset-0 bg-black/80 hidden flex flex-col items-center justify-center z-[90] p-4 backdrop-blur-sm">
+    <div id="reportModal"
+        class="fixed inset-0 bg-black/80 hidden flex flex-col items-center justify-center z-[90] p-4 backdrop-blur-sm">
         <div class="flex justify-between items-center w-full max-w-[450px] mb-4">
             <h3 class="text-white font-bold text-lg">Preview Report</h3>
             <div class="flex space-x-2">
-                <button id="btnDownloadReport" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center text-sm">
+                <button id="btnDownloadReport"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow transition flex items-center text-sm">
                     <i class="fas fa-download mr-2"></i> Simpan
                 </button>
-                <button onclick="closeReportModal()" class="bg-white hover:bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-bold shadow transition text-sm">
+                <button onclick="closeReportModal()"
+                    class="bg-white hover:bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-bold shadow transition text-sm">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
-        
+
         <!-- Container Struk -->
         <div id="reportPreviewContainer" class="overflow-auto max-h-[80vh] rounded shadow-2xl bg-white p-1 modal-scale">
             <!-- Struk akan di-inject ke sini -->
@@ -4623,7 +5676,8 @@ window.deleteGroup = (groupId, groupName) => {
     </div>
 
     <!-- Template Report (Hidden Source) -->
-    <div id="receiptTemplate" class="hidden bg-white text-slate-800 font-sans shadow-none" style="width: 500px; padding: 0;">
+    <div id="receiptTemplate" class="hidden bg-white text-slate-800 font-sans shadow-none"
+        style="width: 500px; padding: 0;">
         <div class="bg-slate-900 text-white p-6 rounded-t-lg">
             <div class="flex justify-between items-start">
                 <div>
@@ -4631,7 +5685,8 @@ window.deleteGroup = (groupId, groupName) => {
                     <p class="text-blue-200 text-xs mt-1 tracking-wider">OFFICIAL TRANSACTION DOCUMENT</p>
                 </div>
                 <div class="text-right">
-                    <span id="recType" class="inline-block px-3 py-1 bg-white text-blue-800 rounded font-bold text-xs shadow">TYPE</span>
+                    <span id="recType"
+                        class="inline-block px-3 py-1 bg-white text-blue-800 rounded font-bold text-xs shadow">TYPE</span>
                 </div>
             </div>
         </div>
@@ -4656,9 +5711,10 @@ window.deleteGroup = (groupId, groupName) => {
 
             <div class="mb-6">
                 <p class="text-gray-400 text-xs uppercase mb-2">Transaction Details</p>
-                
+
                 <!-- Single Item View -->
-                <div id="recSingleContainer" class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <div id="recSingleContainer"
+                    class="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
                     <div class="w-full">
                         <span class="block text-lg font-bold text-gray-800" id="recItem">Item Name</span>
                         <div class="text-xs text-gray-500 mt-1 space-x-2 flex items-center">
@@ -4670,7 +5726,8 @@ window.deleteGroup = (groupId, groupName) => {
                     <div class="text-center ml-4 min-w-[80px]">
                         <span class="block text-xs text-gray-400 mb-1">Quantity</span>
                         <span class="block text-2xl font-bold" id="recAmount">0</span>
-                        <span class="block text-[10px] font-bold uppercase mt-1 px-2 py-0.5 rounded text-white" id="recBadge">TYPE</span>
+                        <span class="block text-[10px] font-bold uppercase mt-1 px-2 py-0.5 rounded text-white"
+                            id="recBadge">TYPE</span>
                     </div>
                 </div>
 
@@ -4692,12 +5749,15 @@ window.deleteGroup = (groupId, groupName) => {
 
             <div class="mb-6">
                 <p class="text-gray-400 text-xs uppercase mb-1">Description / Notes</p>
-                <p id="recDesc" class="text-sm text-gray-600 italic border-l-2 border-gray-300 pl-3 py-1 whitespace-pre-line">No description.</p>
+                <p id="recDesc"
+                    class="text-sm text-gray-600 italic border-l-2 border-gray-300 pl-3 py-1 whitespace-pre-line">No
+                    description.</p>
             </div>
 
             <div id="receiptImgCont" class="hidden mt-4">
                 <p class="text-gray-400 text-xs uppercase mb-2">Attached Proof</p>
-                <div class="w-full rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex justify-center p-2">
+                <div
+                    class="w-full rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex justify-center p-2">
                     <img id="receiptImg" class="max-h-64 object-contain rounded" style="display: block;">
                 </div>
             </div>
@@ -4708,121 +5768,204 @@ window.deleteGroup = (groupId, groupName) => {
             </div>
         </div>
     </div>
-    
+
     <!-- TOAST -->
-    <div id="toast" class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 translate-y-20 opacity-0 pointer-events-none z-[110]"></div>
+    <div id="toast"
+        class="fixed bottom-5 right-5 px-6 py-3 rounded-lg shadow-xl text-white font-bold transition transform duration-300 translate-y-20 opacity-0 pointer-events-none z-[110]">
+    </div>
     <!-- GROUP MANAGER MODAL -->
-<div id="groupManagerModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-5xl p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
-        <div class="flex justify-between items-center mb-6">
-    <h3 class="text-xl font-bold text-purple-400 flex items-center">
-        <i class="fas fa-users mr-3"></i>Manajemen Kelompok & Limit
+    <div id="groupManagerModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-5xl p-6 transform transition-all scale-100 modal-scale flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-purple-400 flex items-center">
+                    <i class="fas fa-users mr-3"></i>Manajemen Kelompok & Limit
+                </h3>
+                <div class="flex gap-2">
+                    <button onclick="renderGroupTable()"
+                        class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-bold text-sm shadow flex items-center transition"
+                        title="Refresh Data">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button onclick="openAddGroupModal()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <i class="fas fa-plus-circle mr-2"></i> Tambah Kelompok
+                    </button>
+                    <button onclick="closeGroupManager()" class="text-slate-400 hover:text-white transition"><i
+                            class="fas fa-times text-xl"></i></button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
+                        <tr>
+                            <th class="p-3">Nama Kelompok</th>
+                            <th class="p-3">Mulai</th>
+                            <th class="p-3">Selesai</th>
+                            <th class="p-3 text-center">Kelas 1<br><span
+                                    class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
+                            <th class="p-3 text-center">Kelas 2<br><span
+                                    class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
+                            <th class="p-3 text-center">Kelas 3<br><span
+                                    class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="group-table-body">
+                        <tr>
+                            <td colspan="7" class="p-8 text-center text-slate-500 italic">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 text-center">
+                <p class="text-[10px] text-slate-500 italic">💡 Limit dihitung per minggu sesuai periode yang ditentukan
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT GROUP MODAL -->
+    <div id="addGroupModal"
+        class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl p-6 transform transition-all scale-100 modal-scale">
+            <h3 id="group-modal-title" class="text-lg font-bold text-white mb-4">Tambah Kelompok Baru</h3>
+            <form id="group-form" onsubmit="saveGroupData(event)" class="space-y-4">
+                <input type="hidden" id="group-id-input">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Nama Kelompok</label>
+                    <input type="text" id="group-name" required
+                        class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">
+                            <i class="fas fa-calendar-alt mr-1 text-purple-400"></i> Tanggal Mulai (Periode Limit)
+                        </label>
+                        <div class="date-input-wrapper">
+                            <input type="text" id="group-week-start" placeholder="Pilih tanggal mulai..." required
+                                class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none"
+                                readonly>
+                            <i class="fas fa-calendar-day date-input-icon"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">
+                            <i class="fas fa-calendar-alt mr-1 text-purple-400"></i> Tanggal Selesai
+                        </label>
+                        <div class="date-input-wrapper">
+                            <input type="text" id="group-week-end" placeholder="Pilih tanggal selesai..." required
+                                class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none"
+                                readonly>
+                            <i class="fas fa-calendar-check date-input-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <p class="text-xs font-bold text-slate-400 mb-3 uppercase">Limit Per Kelas (Unit)</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">Kelas 1</label>
+                            <input type="number" id="group-limit-k1" min="0" value="0"
+                                class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-red-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">Kelas 2</label>
+                            <input type="number" id="group-limit-k2" min="0" value="0"
+                                class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-orange-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">Kelas 3</label>
+                            <input type="number" id="group-limit-k3" min="0" value="0"
+                                class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-yellow-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">Kelas 4</label>
+                            <input type="number" id="group-limit-k4" min="0" value="0"
+                                class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-green-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-500 mb-1">Aksesoris</label>
+                            <input type="number" id="group-limit-acc" min="0" value="0"
+                                class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-purple-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeAddGroupModal()"
+                        class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
+                    <button type="submit"
+                        class="flex-1 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 font-bold transition shadow-lg">
+                        <i class="fas fa-save mr-2"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- SALES REPORT MODAL -->
+    <div id="salesReportModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-blue-500/50 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all scale-100 modal-scale flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                <h3 class="text-lg font-bold text-white flex items-center">
+                    <i class="fas fa-file-invoice-dollar mr-2 text-blue-400"></i> Laporan Transaksi Penjualan
+                </h3>
+                <div class="flex gap-2">
+                    <button id="btnDownloadSalesReport" onclick="downloadSalesReport()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <i class="fas fa-download mr-2"></i> Download
+                    </button>
+                    <button onclick="closeSalesReportModal()" class="text-slate-400 hover:text-white transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="salesReportContent" class="flex-1 overflow-y-auto custom-scrollbar bg-slate-800/50">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+    <!-- CRAFTING MATERIAL USAGE REPORT MODAL -->
+    <div id="craftingReportModal"
+        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-4xl transform transition-all scale-100 modal-scale flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+    <h3 class="text-lg font-bold text-white flex items-center">
+        <i class="fas fa-industry mr-2 text-purple-400"></i> Laporan Penggunaan Bahan Produksi
     </h3>
     <div class="flex gap-2">
-        <button onclick="renderGroupTable()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-bold text-sm shadow flex items-center transition" title="Refresh Data">
-            <i class="fas fa-sync-alt"></i>
+        <button onclick="toggleAllCraftingReports(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
+            <i class="fas fa-chevron-down mr-1"></i> Buka Semua
         </button>
-        <button onclick="openAddGroupModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
-            <i class="fas fa-plus-circle mr-2"></i> Tambah Kelompok
+        <button onclick="toggleAllCraftingReports(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
+            <i class="fas fa-chevron-up mr-1"></i> Tutup Semua
         </button>
-        <button onclick="closeGroupManager()" class="text-slate-400 hover:text-white transition"><i class="fas fa-times text-xl"></i></button>
-    </div>
-</div>
-        
-        <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-800/30">
-            <table class="w-full text-left">
-                <thead class="bg-slate-800 text-xs text-slate-400 uppercase font-bold sticky top-0 z-10">
-                    <tr>
-                        <th class="p-3">Nama Kelompok</th>
-                        <th class="p-3">Mulai</th>
-                        <th class="p-3">Selesai</th>
-                        <th class="p-3 text-center">Kelas 1<br><span class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
-                        <th class="p-3 text-center">Kelas 2<br><span class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
-                        <th class="p-3 text-center">Kelas 3<br><span class="text-[9px] normal-case text-slate-600">(Sisa/Total)</span></th>
-                        <th class="p-3 text-center">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="group-table-body">
-                    <tr><td colspan="7" class="p-8 text-center text-slate-500 italic">Memuat data...</td></tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="mt-4 pt-3 border-t border-slate-800 text-center">
-            <p class="text-[10px] text-slate-500 italic">💡 Limit dihitung per minggu sesuai periode yang ditentukan</p>
-        </div>
-    </div>
-</div>
+                    <button id="btnDownloadCraftingReport" onclick="downloadCraftingReport()"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
+                        <i class="fas fa-download mr-2"></i> Download
+                    </button>
+                    <button onclick="closeCraftingReportModal()" class="text-slate-400 hover:text-white transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
 
-<!-- ADD/EDIT GROUP MODAL -->
-<div id="addGroupModal" class="fixed inset-0 z-[60] hidden bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl p-6 transform transition-all scale-100 modal-scale">
-        <h3 id="group-modal-title" class="text-lg font-bold text-white mb-4">Tambah Kelompok Baru</h3>
-        <form id="group-form" onsubmit="saveGroupData(event)" class="space-y-4">
-            <input type="hidden" id="group-id-input">
-            
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Nama Kelompok</label>
-                <input type="text" id="group-name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none">
+            <div id="craftingReportContent" class="flex-1 overflow-y-auto custom-scrollbar bg-slate-800/50">
+                <!-- Content injected by JS -->
             </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">
-                        <i class="fas fa-calendar-alt mr-1 text-purple-400"></i> Tanggal Mulai (Periode Limit)
-                    </label>
-                    <div class="date-input-wrapper">
-                        <input type="text" id="group-week-start" placeholder="Pilih tanggal mulai..." required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none" readonly>
-                        <i class="fas fa-calendar-day date-input-icon"></i>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">
-                        <i class="fas fa-calendar-alt mr-1 text-purple-400"></i> Tanggal Selesai
-                    </label>
-                    <div class="date-input-wrapper">
-                        <input type="text" id="group-week-end" placeholder="Pilih tanggal selesai..." required class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none" readonly>
-                        <i class="fas fa-calendar-check date-input-icon"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                <p class="text-xs font-bold text-slate-400 mb-3 uppercase">Limit Per Kelas (Unit)</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-1">Kelas 1</label>
-                        <input type="number" id="group-limit-k1" min="0" value="0" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-red-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-1">Kelas 2</label>
-                        <input type="number" id="group-limit-k2" min="0" value="0" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-orange-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-1">Kelas 3</label>
-                        <input type="number" id="group-limit-k3" min="0" value="0" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-yellow-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-1">Kelas 4</label>
-                        <input type="number" id="group-limit-k4" min="0" value="0" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-green-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-500 mb-1">Aksesoris</label>
-                        <input type="number" id="group-limit-acc" min="0" value="0" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-center focus:border-purple-500 outline-none">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex gap-3 mt-6">
-                <button type="button" onclick="closeAddGroupModal()" class="flex-1 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600 font-medium transition">Batal</button>
-                <button type="submit" class="flex-1 py-2 bg-purple-600 text-white rounded hover:bg-purple-500 font-bold transition shadow-lg">
-                    <i class="fas fa-save mr-2"></i> Simpan
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
-</div>
 </body>
+
 </html>
-
-
