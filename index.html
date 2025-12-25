@@ -257,32 +257,35 @@
             pointer-events: none;
             font-size: 14px;
         }
-        /* Slide animations for collapsible reports */
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        max-height: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        max-height: 2000px;
-        transform: translateY(0);
-    }
-}
 
-@keyframes slideUp {
-    from {
-        opacity: 1;
-        max-height: 2000px;
-        transform: translateY(0);
-    }
-    to {
-        opacity: 0;
-        max-height: 0;
-        transform: translateY(-10px);
-    }
-}
+        /* Slide animations for collapsible reports */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                max-height: 2000px;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                max-height: 2000px;
+                transform: translateY(0);
+            }
+
+            to {
+                opacity: 0;
+                max-height: 0;
+                transform: translateY(-10px);
+            }
+        }
     </style>
 
     <script type="module">
@@ -429,24 +432,8 @@ window.filterPosByClass = (className) => {
                 warehouseHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderHistoryTable();
             });
-
-            // Listener for Sales History
-const qSalesHist = query(
-    collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), 
-    where('type', '==', 'SALES'),
-    orderBy('timestamp', 'desc'), 
-    limit(50)
-);
-onSnapshot(qSalesHist, (snap) => {
-    salesHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
-    
-    // Auto-update if POS page is active
-    if(document.getElementById('pos').classList.contains('active')) {
-        renderSalesHistory();
-    }
-});
-
-            const qWhHist = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), orderBy('timestamp', 'desc'), limit(150));
+           
+        const qWhHist = query(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), orderBy('timestamp', 'desc'), limit(150));
 onSnapshot(qWhHist, (snap) => {
     const allLogs = snap.docs.map(d => ({id: d.id, ...d.data()}));
     warehouseSpecificHistory = allLogs.filter(log => log.type === 'WAREHOUSE');
@@ -464,6 +451,22 @@ onSnapshot(qWhHist, (snap) => {
     renderWarehouseSpecificHistory();
     renderCraftingHistory(); // Update modal jika terbuka
 });
+
+ // Listener for Sales History
+            const qSalesHist = query(
+                collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), 
+                where('type', '==', 'SALES'),
+                orderBy('timestamp', 'desc'), 
+                limit(50)
+            );
+            onSnapshot(qSalesHist, (snap) => {
+                salesHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    
+                // Auto-update if POS page is active
+                if(document.getElementById('pos').classList.contains('active')) {
+                    renderSalesHistory();
+                }
+            });
             
             // Listener Weapon Database
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'weapon_database'), (snap) => {
@@ -3033,7 +3036,7 @@ window.renderSalesReport = () => {
         timeStyle: 'short' 
     });
     
-    // Build items table
+    // Build items table with stock info
     let itemsHtml = tx.items.map(item => {
         let classColor = 'bg-slate-700 text-slate-300';
         if(item.weaponClass === 'KELAS 1') classColor = 'bg-red-900/50 text-red-300';
@@ -3042,6 +3045,10 @@ window.renderSalesReport = () => {
         else if(item.weaponClass === 'KELAS 4') classColor = 'bg-green-900/50 text-green-300';
         else if(item.weaponClass === 'AKSESORIS') classColor = 'bg-purple-900/50 text-purple-300';
         
+        // Calculate stock before/after
+        const stockAfter = item.stockAfter || 0;
+        const stockBefore = item.stockBefore || (stockAfter + item.qty);
+        
         return `
             <tr class="border-b border-slate-700">
                 <td class="p-3">
@@ -3049,6 +3056,13 @@ window.renderSalesReport = () => {
                     <span class="text-[9px] ${classColor} px-2 py-0.5 rounded font-bold uppercase mt-1 inline-block">${item.weaponClass || 'Umum'}</span>
                 </td>
                 <td class="p-3 text-center font-mono text-slate-300">${item.qty}</td>
+                <td class="p-3 text-center">
+                    <div class="flex items-center justify-center gap-1 text-xs">
+                        <span class="font-mono text-slate-400">${stockBefore}</span>
+                        <i class="fas fa-arrow-right text-slate-600"></i>
+                        <span class="font-mono text-rose-400 font-bold">${stockAfter}</span>
+                    </div>
+                </td>
                 <td class="p-3 text-right font-mono text-slate-400">Rp ${item.price.toLocaleString()}</td>
                 <td class="p-3 text-right font-mono text-emerald-400 font-bold">Rp ${item.subtotal.toLocaleString()}</td>
             </tr>
@@ -3117,6 +3131,7 @@ window.renderSalesReport = () => {
                             <tr>
                                 <th class="p-3 text-left">Produk</th>
                                 <th class="p-3 text-center">Qty</th>
+                                <th class="p-3 text-center">Stok (Before→After)</th>
                                 <th class="p-3 text-right">Harga</th>
                                 <th class="p-3 text-right">Subtotal</th>
                             </tr>
@@ -4067,7 +4082,7 @@ window.downloadSalesReport = async () => {
             renderCart();
         };
 
-        window.checkout = async () => {
+    window.checkout = async () => {
     if(cart.length === 0) return;
     
     const pic = document.getElementById('pos-pic').value.trim();
@@ -4142,17 +4157,6 @@ window.downloadSalesReport = async () => {
             let totalSales = 0;
             const descItems = [];
 
-            // Update product stock
-            cart.forEach(item => {
-                const prod = productStock.find(p => p.id === item.id);
-                const remaining = prod.stock - item.qty;
-                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.id);
-                batch.update(ref, { stock: remaining });
-                
-                totalSales += (item.qty * item.sellingPrice);
-                descItems.push(`${item.name} (${item.qty})`);
-            });
-
             // Update group usage
             const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', groupId);
             batch.update(groupRef, {
@@ -4163,20 +4167,32 @@ window.downloadSalesReport = async () => {
                 usedAksesoris: usedAcc + cartByClass['AKSESORIS']
             });
 
-            // Create detailed log with before/after stock
-const itemsDetail = cart.map(item => {
+// Create detailed log with before/after stock
+// Update product stock & prepare detailed items
+const itemsDetail = [];
+cart.forEach(item => {
     const prod = productStock.find(p => p.id === item.id);
-    return {
+    const stockBefore = prod.stock;
+    const stockAfter = prod.stock - item.qty;
+    const remaining = stockAfter;
+    
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.id);
+    batch.update(ref, { stock: remaining });
+    
+    totalSales += (item.qty * item.sellingPrice);
+    descItems.push(`${item.name} (${item.qty})`);
+    
+    // Store detailed item info
+    itemsDetail.push({
         name: item.name,
-        weaponClass: item.weaponClass || item.category,
+        weaponClass: item.weaponClass || item.category || 'Umum',
         qty: item.qty,
         price: item.sellingPrice,
         subtotal: item.qty * item.sellingPrice,
-        stockBefore: prod.stock,
-        stockAfter: prod.stock - item.qty
-    };
+        stockBefore: stockBefore,
+        stockAfter: stockAfter
+    });
 });
-
 const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'global_history'));
 batch.set(logRef, {
     type: 'SALES',
@@ -4198,19 +4214,24 @@ batch.set(logRef, {
 
             await batch.commit();
 
-// TAMBAHKAN INI - Save transaction details for report
+// Save transaction details for report with stock info
 lastSalesTransaction = {
     timestamp: new Date(),
     groupName: group.name,
     groupId: groupId,
     pic: pic,
-    items: cart.map(item => ({
-        name: item.name,
-        qty: item.qty,
-        price: item.sellingPrice,
-        subtotal: item.qty * item.sellingPrice,
-        weaponClass: item.weaponClass || item.category
-    })),
+    items: cart.map(item => {
+        const prod = productStock.find(p => p.id === item.id);
+        return {
+            name: item.name,
+            qty: item.qty,
+            price: item.sellingPrice,
+            subtotal: item.qty * item.sellingPrice,
+            weaponClass: item.weaponClass || item.category,
+            stockBefore: prod.stock,
+            stockAfter: prod.stock - item.qty
+        };
+    }),
     totalAmount: totalSales,
     limitUsed: {
         kelas1: cartByClass['KELAS 1'],
@@ -4256,6 +4277,9 @@ window.renderSalesHistory = () => {
                 timeStyle: 'short' 
             }) : '-';
         
+        // Calculate totals
+        const totalItems = sale.itemsDetail ? sale.itemsDetail.reduce((sum, item) => sum + item.qty, 0) : 0;
+        
         // Build items table
         const itemsHtml = sale.itemsDetail ? sale.itemsDetail.map(item => {
             let classColor = 'bg-slate-700 text-slate-300';
@@ -4285,51 +4309,97 @@ window.renderSalesHistory = () => {
         }).join('') : '<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Detail tidak tersedia</td></tr>';
         
         return `
-            <div id="sales-record-${idx}" class="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-700">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <h4 class="font-bold text-white">Transaksi #${salesHistory.length - idx}</h4>
+            <div class="bg-slate-800 border border-slate-700 rounded-lg mb-3 overflow-hidden">
+                <!-- Header (Always Visible) - Clickable -->
+                <div onclick="toggleSalesDetail(${idx})" 
+                     class="p-4 cursor-pointer hover:bg-slate-700/50 transition flex justify-between items-center">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-1">
+                            <h4 class="font-bold text-emerald-400">Transaksi #${salesHistory.length - idx}</h4>
                             <span class="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-700/50">
                                 ${sale.groupName}
                             </span>
                         </div>
                         <p class="text-xs text-slate-400">
-                            <i class="fas fa-clock mr-1"></i> ${date} | 
-                            <i class="fas fa-user ml-2 mr-1"></i> ${sale.pic}
+                            <i class="fas fa-clock mr-1"></i> ${date}
                         </p>
+                        <div class="flex gap-4 mt-2 text-xs">
+                            <span class="text-slate-500">
+                                <i class="fas fa-user text-blue-400 mr-1"></i> ${sale.pic}
+                            </span>
+                            <span class="text-slate-500">
+                                <i class="fas fa-boxes text-purple-400 mr-1"></i> ${totalItems} Unit
+                            </span>
+                            <span class="text-slate-500">
+                                <i class="fas fa-money-bill-wave text-emerald-400 mr-1"></i> Rp ${(sale.amount || 0).toLocaleString()}
+                            </span>
+                        </div>
                     </div>
-                    <button onclick="takeElementScreenshot('sales-record-${idx}', 'Transaksi_${idx}')" 
-                            class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-2 py-1 transition text-xs">
-                        <i class="fas fa-camera"></i>
-                    </button>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="border border-slate-700 rounded overflow-hidden">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-900 text-[10px] text-slate-500 uppercase">
-                                <tr>
-                                    <th class="p-2">Produk</th>
-                                    <th class="p-2 text-center">Qty</th>
-                                    <th class="p-2 text-center">Stok (Before→After)</th>
-                                    <th class="p-2 text-right">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${itemsHtml}
-                            </tbody>
-                        </table>
+                    <div class="flex items-center gap-2">
+                        <button onclick="event.stopPropagation(); takeElementScreenshot('sales-detail-${idx}', 'Transaksi_${idx}')" 
+                                class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-3 py-2 transition text-xs">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                        <i id="sales-icon-${idx}" class="fas fa-chevron-down text-slate-500 transition-transform"></i>
                     </div>
                 </div>
                 
-                <div class="flex justify-between items-center bg-emerald-900/20 border border-emerald-700/50 rounded p-3">
-                    <span class="text-slate-400 font-bold text-sm uppercase">Total Pembayaran</span>
-                    <span class="text-xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                <!-- Detail (Collapsible) -->
+                <div id="sales-detail-${idx}" class="hidden">
+                    <div class="p-4 pt-0 border-t border-slate-700">
+                        <div class="mb-3">
+                            <h5 class="text-xs font-bold text-slate-400 uppercase mb-2">
+                                <i class="fas fa-list mr-1"></i> Detail Pembelian
+                            </h5>
+                            <div class="border border-slate-700 rounded overflow-hidden bg-slate-900/30">
+                                <table class="w-full text-left">
+                                    <thead class="bg-slate-800 text-[10px] text-slate-500 uppercase">
+                                        <tr>
+                                            <th class="p-2">Produk</th>
+                                            <th class="p-2 text-center">Qty</th>
+                                            <th class="p-2 text-center">Stok (Before→After)</th>
+                                            <th class="p-2 text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-emerald-900/20 border border-emerald-700/50 rounded p-3">
+                            <span class="text-slate-400 font-bold text-sm uppercase">Total Pembayaran</span>
+                            <span class="text-xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
+};
+
+window.toggleSalesDetail = (idx) => {
+    const detail = document.getElementById(`sales-detail-${idx}`);
+    const icon = document.getElementById(`sales-icon-${idx}`);
+    
+    if(!detail || !icon) return;
+    
+    const isHidden = detail.classList.contains('hidden');
+    
+    if(isHidden) {
+        // Expand
+        detail.classList.remove('hidden');
+        detail.style.animation = 'slideDown 0.3s ease-out';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        // Collapse
+        detail.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            detail.classList.add('hidden');
+        }, 250);
+        icon.style.transform = 'rotate(0deg)';
+    }
 };
 
         // ==========================================
@@ -4435,16 +4505,18 @@ window.renderSalesHistory = () => {
         };
 
         // UI HELPERS
-        window.switchTab = (tabId) => {
+ window.switchTab = (tabId) => {
     document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`btn-${tabId}`).classList.add('active');
     
-    // NEW: Auto-render when switching to POS
+    // Auto-render when switching to POS
     if(tabId === 'pos') {
-        setTimeout(() => renderSalesHistory(), 100);
+        setTimeout(() => {
+            renderSalesHistory();
+        }, 100);
     }
 };
         function showToast(msg, type='success') {
@@ -4491,11 +4563,6 @@ window.renderSalesHistory = () => {
                 <i class="fas fa-cash-register w-5 text-center"></i>
                 <span>Toko Senjata (POS)</span>
             </div>
-            <div id="btn-history" onclick="switchTab('history')"
-                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
-                <i class="fas fa-history w-5 text-center"></i>
-                <span>Riwayat Global</span>
-            </div>
             <div id="btn-weapon-db" onclick="switchTab('weapon-db')"
                 class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-database w-5 text-center"></i>
@@ -4505,6 +4572,11 @@ window.renderSalesHistory = () => {
                 class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
                 <i class="fas fa-boxes w-5 text-center"></i>
                 <span>Inventori Senjata</span>
+            </div>
+                        <div id="btn-history" onclick="switchTab('history')"
+                class="sidebar-item px-6 py-3 text-slate-400 font-medium flex items-center gap-3">
+                <i class="fas fa-history w-5 text-center"></i>
+                <span>Riwayat Global</span>
             </div>
         </nav>
 
@@ -4903,9 +4975,9 @@ window.renderSalesHistory = () => {
                             <i class="fas fa-history mr-2 text-blue-400"></i>Riwayat Transaksi Penjualan
                         </h3>
                         <button onclick="renderSalesHistory()"
-                            class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition flex items-center">
-                            <i class="fas fa-sync-alt mr-2"></i> Refresh
-                        </button>
+    class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition flex items-center">
+    <i class="fas fa-sync-alt mr-2"></i> Refresh
+</button>
                     </div>
 
                     <div id="sales-history-container" class="max-h-[600px] overflow-y-auto custom-scrollbar">
@@ -5941,16 +6013,18 @@ window.renderSalesHistory = () => {
         <div
             class="bg-slate-900 border border-purple-500/50 rounded-xl shadow-2xl w-full max-w-4xl transform transition-all scale-100 modal-scale flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center p-4 border-b border-slate-800">
-    <h3 class="text-lg font-bold text-white flex items-center">
-        <i class="fas fa-industry mr-2 text-purple-400"></i> Laporan Penggunaan Bahan Produksi
-    </h3>
-    <div class="flex gap-2">
-        <button onclick="toggleAllCraftingReports(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
-            <i class="fas fa-chevron-down mr-1"></i> Buka Semua
-        </button>
-        <button onclick="toggleAllCraftingReports(false)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
-            <i class="fas fa-chevron-up mr-1"></i> Tutup Semua
-        </button>
+                <h3 class="text-lg font-bold text-white flex items-center">
+                    <i class="fas fa-industry mr-2 text-purple-400"></i> Laporan Penggunaan Bahan Produksi
+                </h3>
+                <div class="flex gap-2">
+                    <button onclick="toggleAllCraftingReports(true)"
+                        class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
+                        <i class="fas fa-chevron-down mr-1"></i> Buka Semua
+                    </button>
+                    <button onclick="toggleAllCraftingReports(false)"
+                        class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs font-bold transition">
+                        <i class="fas fa-chevron-up mr-1"></i> Tutup Semua
+                    </button>
                     <button id="btnDownloadCraftingReport" onclick="downloadCraftingReport()"
                         class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                         <i class="fas fa-download mr-2"></i> Download
