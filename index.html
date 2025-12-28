@@ -452,13 +452,32 @@ onSnapshot(qWhHist, (snap) => {
     renderCraftingHistory(); // Update modal jika terbuka
 });
 
- // Listener for Sales History
-            const qSalesHist = query(
-                collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), 
-                where('type', '==', 'SALES'),
-                orderBy('timestamp', 'desc'), 
-                limit(50)
-            );
+ // Listener for Sales History - NO INDEX REQUIRED
+const qSalesHist = query(
+    collection(db, 'artifacts', appId, 'public', 'data', 'global_history'), 
+    where('type', '==', 'SALES'),
+    limit(50)
+);
+onSnapshot(qSalesHist, (snap) => {
+    // Sort di client-side (bukan di Firebase)
+    salesHistory = snap.docs
+    .map(d => ({id: d.id, ...d.data()}))
+    .sort((a, b) => {
+        // Sort by timestamp descending (newest first)
+        const timeA = a.timestamp?.seconds || 0;
+        const timeB = b.timestamp?.seconds || 0;
+        return timeB - timeA;
+    });
+
+console.log('📊 Sales History Loaded & Sorted:', salesHistory.length, 'transactions');
+    
+    console.log('📊 Sales History Updated:', salesHistory.length, 'items');
+    
+    // Auto-update if POS page is active
+    if(document.getElementById('pos').classList.contains('active')) {
+        renderSalesHistory();
+    }
+});
             onSnapshot(qSalesHist, (snap) => {
                 salesHistory = snap.docs.map(d => ({id: d.id, ...d.data()}));
     
@@ -2676,16 +2695,6 @@ window.deleteGroup = (groupId, groupName) => {
             `).join('');
         };
 
-        // SALES REPORT MODAL
-window.openSalesReportModal = () => {
-    if(!lastSalesTransaction) {
-        return showAlert("Error", "Tidak ada data transaksi untuk ditampilkan.", "warning");
-    }
-    
-    renderSalesReport();
-    document.getElementById('salesReportModal').classList.remove('hidden');
-};
-
 // CRAFTING MATERIAL USAGE REPORT
 window.openCraftingReportModal = () => {
     if(allCraftingReports.length === 0) {
@@ -3013,178 +3022,6 @@ window.downloadCraftingReport = async () => {
         link.click();
         
         showToast("Laporan produksi berhasil disimpan!", "success");
-    } catch(err) {
-        console.error(err);
-        showAlert("Error", "Gagal menyimpan laporan: " + err.message, "error");
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-};
-
-window.closeSalesReportModal = () => {
-    document.getElementById('salesReportModal').classList.add('hidden');
-};
-
-window.renderSalesReport = () => {
-    const container = document.getElementById('salesReportContent');
-    if(!container || !lastSalesTransaction) return;
-    
-    const tx = lastSalesTransaction;
-    const date = tx.timestamp.toLocaleString('id-ID', { 
-        dateStyle: 'full', 
-        timeStyle: 'short' 
-    });
-    
-    // Build items table with stock info
-    let itemsHtml = tx.items.map(item => {
-        let classColor = 'bg-slate-700 text-slate-300';
-        if(item.weaponClass === 'KELAS 1') classColor = 'bg-red-900/50 text-red-300';
-        else if(item.weaponClass === 'KELAS 2') classColor = 'bg-orange-900/50 text-orange-300';
-        else if(item.weaponClass === 'KELAS 3') classColor = 'bg-yellow-900/50 text-yellow-300';
-        else if(item.weaponClass === 'KELAS 4') classColor = 'bg-green-900/50 text-green-300';
-        else if(item.weaponClass === 'AKSESORIS') classColor = 'bg-purple-900/50 text-purple-300';
-        
-        // Calculate stock before/after
-        const stockAfter = item.stockAfter || 0;
-        const stockBefore = item.stockBefore || (stockAfter + item.qty);
-        
-        return `
-            <tr class="border-b border-slate-700">
-                <td class="p-3">
-                    <div class="font-bold text-slate-200">${item.name}</div>
-                    <span class="text-[9px] ${classColor} px-2 py-0.5 rounded font-bold uppercase mt-1 inline-block">${item.weaponClass || 'Umum'}</span>
-                </td>
-                <td class="p-3 text-center font-mono text-slate-300">${item.qty}</td>
-                <td class="p-3 text-center">
-                    <div class="flex items-center justify-center gap-1 text-xs">
-                        <span class="font-mono text-slate-400">${stockBefore}</span>
-                        <i class="fas fa-arrow-right text-slate-600"></i>
-                        <span class="font-mono text-rose-400 font-bold">${stockAfter}</span>
-                    </div>
-                </td>
-                <td class="p-3 text-right font-mono text-slate-400">Rp ${item.price.toLocaleString()}</td>
-                <td class="p-3 text-right font-mono text-emerald-400 font-bold">Rp ${item.subtotal.toLocaleString()}</td>
-            </tr>
-        `;
-    }).join('');
-    
-    // Build limit usage summary
-    const limitHtml = `
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-            <div class="bg-red-900/20 border border-red-700/50 rounded p-2 text-center">
-                <div class="text-red-300 font-bold">${tx.limitUsed.kelas1}</div>
-                <div class="text-slate-500 text-[9px]">Kelas 1</div>
-            </div>
-            <div class="bg-orange-900/20 border border-orange-700/50 rounded p-2 text-center">
-                <div class="text-orange-300 font-bold">${tx.limitUsed.kelas2}</div>
-                <div class="text-slate-500 text-[9px]">Kelas 2</div>
-            </div>
-            <div class="bg-yellow-900/20 border border-yellow-700/50 rounded p-2 text-center">
-                <div class="text-yellow-300 font-bold">${tx.limitUsed.kelas3}</div>
-                <div class="text-slate-500 text-[9px]">Kelas 3</div>
-            </div>
-            <div class="bg-green-900/20 border border-green-700/50 rounded p-2 text-center">
-                <div class="text-green-300 font-bold">${tx.limitUsed.kelas4}</div>
-                <div class="text-slate-500 text-[9px]">Kelas 4</div>
-            </div>
-            <div class="bg-purple-900/20 border border-purple-700/50 rounded p-2 text-center">
-                <div class="text-purple-300 font-bold">${tx.limitUsed.aksesoris}</div>
-                <div class="text-slate-500 text-[9px]">Aksesoris</div>
-            </div>
-        </div>
-    `;
-    
-    container.innerHTML = `
-        <div class="bg-gradient-to-br from-blue-900/50 to-purple-900/50 p-6 rounded-t-xl border-b border-slate-700">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h2 class="text-2xl font-bold text-white mb-1">BUKTI TRANSAKSI PENJUALAN</h2>
-                    <p class="text-blue-300 text-sm">Vikrama ERP - Gun Store System</p>
-                </div>
-                <div class="text-right">
-                    <div class="text-xs text-slate-400 uppercase font-bold">Waktu Transaksi</div>
-                    <div class="text-sm text-white font-mono">${date}</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="p-6 space-y-6">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <p class="text-slate-500 text-xs uppercase mb-1">Seller (PIC)</p>
-                    <p class="font-bold text-white">${tx.pic}</p>
-                </div>
-                <div>
-                    <p class="text-slate-500 text-xs uppercase mb-1">Kelompok Pembeli</p>
-                    <p class="font-bold text-white">${tx.groupName}</p>
-                </div>
-            </div>
-            
-            <div>
-                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
-                    <i class="fas fa-shopping-cart mr-2"></i> Detail Pembelian
-                </h4>
-                <div class="border border-slate-700 rounded-lg overflow-hidden">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-800 text-xs text-slate-400 uppercase">
-                            <tr>
-                                <th class="p-3 text-left">Produk</th>
-                                <th class="p-3 text-center">Qty</th>
-                                <th class="p-3 text-center">Stok (Before→After)</th>
-                                <th class="p-3 text-right">Harga</th>
-                                <th class="p-3 text-right">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-4">
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400 font-bold uppercase text-sm">Total Pembayaran</span>
-                    <span class="text-3xl font-bold text-emerald-400">Rp ${tx.totalAmount.toLocaleString()}</span>
-                </div>
-            </div>
-            
-            <div>
-                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center">
-                    <i class="fas fa-chart-bar mr-2"></i> Pemakaian Limit Kelompok
-                </h4>
-                ${limitHtml}
-            </div>
-            
-            <div class="border-t border-slate-800 pt-4 flex justify-between items-end text-[10px] text-slate-600">
-                <span>Generated by Vikrama ERP</span>
-                <span>*** DOKUMEN SAH ***</span>
-            </div>
-        </div>
-    `;
-};
-
-window.downloadSalesReport = async () => {
-    const btn = document.getElementById('btnDownloadSalesReport');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
-    btn.disabled = true;
-    
-    try {
-        const element = document.getElementById('salesReportContent');
-        const canvas = await html2canvas(element, {
-            backgroundColor: '#0f172a',
-            scale: 2,
-            logging: false
-        });
-        
-        const link = document.createElement('a');
-        link.download = `Transaksi_Penjualan_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        
-        showToast("Laporan transaksi berhasil disimpan!", "success");
     } catch(err) {
         console.error(err);
         showAlert("Error", "Gagal menyimpan laporan: " + err.message, "error");
@@ -4212,7 +4049,7 @@ batch.set(logRef, {
     }
 });
 
-            await batch.commit();
+    await batch.commit();
 
 // Save transaction details for report with stock info
 lastSalesTransaction = {
@@ -4248,135 +4085,453 @@ document.getElementById('pos-pic').value = '';
 document.getElementById('pos-group-select').value = '';
 
 // Show success with option to view report
-showConfirm(
+showAlert(
     "Transaksi Berhasil! 🎉",
     `Transaksi penjualan berhasil diproses.<br><br>` +
     `<b>Total: Rp ${totalSales.toLocaleString()}</b><br><br>` +
-    `Apakah Anda ingin melihat laporan transaksi?`,
-    () => {
-        openSalesReportModal();
-    },
+    `Lihat riwayat transaksi di bagian bawah halaman.`,
     "success"
 );
+
+// Auto scroll ke riwayat
+setTimeout(() => {
+    const historySection = document.getElementById('sales-history-container');
+    if(historySection) {
+        historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}, 500);
     }, 'info');
 };
 
 window.renderSalesHistory = () => {
-    const container = document.getElementById('sales-history-container');
-    if(!container) return;
+    console.log('🔄 Rendering Sales History...');
     
-    if(salesHistory.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-500 py-10 italic">Belum ada transaksi penjualan.</div>';
+    const container = document.getElementById('sales-history-container');
+    
+    if(!container) {
+        console.error('❌ Container not found!');
         return;
     }
     
-    container.innerHTML = salesHistory.map((sale, idx) => {
-        const date = sale.timestamp ? 
-            new Date(sale.timestamp.seconds*1000).toLocaleString('id-ID', { 
-                dateStyle: 'medium', 
-                timeStyle: 'short' 
-            }) : '-';
-        
-        // Calculate totals
-        const totalItems = sale.itemsDetail ? sale.itemsDetail.reduce((sum, item) => sum + item.qty, 0) : 0;
-        
-        // Build items table
-        const itemsHtml = sale.itemsDetail ? sale.itemsDetail.map(item => {
-            let classColor = 'bg-slate-700 text-slate-300';
-            if(item.weaponClass === 'KELAS 1') classColor = 'bg-red-900/50 text-red-300';
-            else if(item.weaponClass === 'KELAS 2') classColor = 'bg-orange-900/50 text-orange-300';
-            else if(item.weaponClass === 'KELAS 3') classColor = 'bg-yellow-900/50 text-yellow-300';
-            else if(item.weaponClass === 'KELAS 4') classColor = 'bg-green-900/50 text-green-300';
-            else if(item.weaponClass === 'AKSESORIS') classColor = 'bg-purple-900/50 text-purple-300';
+    if(!salesHistory || salesHistory.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16">
+                <i class="fas fa-receipt text-6xl text-slate-700 mb-4"></i>
+                <p class="text-slate-500 text-lg">Belum ada transaksi penjualan</p>
+                <p class="text-slate-600 text-sm mt-2">Transaksi akan muncul di sini setelah checkout</p>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        container.innerHTML = salesHistory.map((sale, idx) => {
+            const date = sale.timestamp ? 
+                new Date(sale.timestamp.seconds*1000).toLocaleString('id-ID', { 
+                    day: '2-digit',
+                    month: 'short', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '-';
+            
+            const totalItems = sale.itemsDetail ? sale.itemsDetail.reduce((sum, item) => sum + item.qty, 0) : 0;
+            
+            // Simplified items list
+            const itemsList = sale.itemsDetail ? sale.itemsDetail.map(item => {
+                let classIcon = '🔫';
+                if(item.weaponClass === 'KELAS 1') classIcon = '🔴';
+                else if(item.weaponClass === 'KELAS 2') classIcon = '🟠';
+                else if(item.weaponClass === 'KELAS 3') classIcon = '🟡';
+                else if(item.weaponClass === 'KELAS 4') classIcon = '🟢';
+                else if(item.weaponClass === 'AKSESORIS') classIcon = '🟣';
+                
+                return `
+                    <div class="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">${classIcon}</span>
+                                <div>
+                                    <p class="font-bold text-slate-200 text-sm">${item.name}</p>
+                                    <p class="text-xs text-slate-500">
+                                        Stok: ${item.stockBefore} → ${item.stockAfter}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-slate-300">×${item.qty}</p>
+                            <p class="text-xs text-emerald-400 font-mono">Rp ${(item.subtotal || 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<p class="text-slate-500 text-sm italic">Detail tidak tersedia</p>';
+            
+            // Limit usage badges
+            const limits = sale.limitUsed || {};
+            const limitBadges = `
+                ${limits.kelas1 > 0 ? `<span class="text-xs bg-red-900/50 text-red-300 px-2 py-1 rounded">K1: ${limits.kelas1}</span>` : ''}
+                ${limits.kelas2 > 0 ? `<span class="text-xs bg-orange-900/50 text-orange-300 px-2 py-1 rounded">K2: ${limits.kelas2}</span>` : ''}
+                ${limits.kelas3 > 0 ? `<span class="text-xs bg-yellow-900/50 text-yellow-300 px-2 py-1 rounded">K3: ${limits.kelas3}</span>` : ''}
+                ${limits.kelas4 > 0 ? `<span class="text-xs bg-green-900/50 text-green-300 px-2 py-1 rounded">K4: ${limits.kelas4}</span>` : ''}
+                ${limits.aksesoris > 0 ? `<span class="text-xs bg-purple-900/50 text-purple-300 px-2 py-1 rounded">ACC: ${limits.aksesoris}</span>` : ''}
+            `;
             
             return `
-                <tr class="border-b border-slate-700/50 text-xs">
-                    <td class="p-2">
-                        <div class="font-bold text-slate-200">${item.name}</div>
-                        <span class="text-[8px] ${classColor} px-1.5 py-0.5 rounded mt-1 inline-block">${item.weaponClass || 'Umum'}</span>
-                    </td>
-                    <td class="p-2 text-center font-mono text-slate-300">${item.qty}</td>
-                    <td class="p-2 text-center">
-                        <div class="flex items-center justify-center gap-1 text-slate-400">
-                            <span class="font-mono">${item.stockBefore}</span>
-                            <i class="fas fa-arrow-right text-[8px]"></i>
-                            <span class="font-mono text-rose-400 font-bold">${item.stockAfter}</span>
-                        </div>
-                    </td>
-                    <td class="p-2 text-right font-mono text-emerald-400">Rp ${(item.subtotal || 0).toLocaleString()}</td>
-                </tr>
-            `;
-        }).join('') : '<tr><td colspan="4" class="p-3 text-center text-slate-500 italic">Detail tidak tersedia</td></tr>';
-        
-        return `
-            <div class="bg-slate-800 border border-slate-700 rounded-lg mb-3 overflow-hidden">
-                <!-- Header (Always Visible) - Clickable -->
-                <div onclick="toggleSalesDetail(${idx})" 
-                     class="p-4 cursor-pointer hover:bg-slate-700/50 transition flex justify-between items-center">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-1">
-                            <h4 class="font-bold text-emerald-400">Transaksi #${salesHistory.length - idx}</h4>
-                            <span class="text-xs bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded border border-emerald-700/50">
-                                ${sale.groupName}
-                            </span>
-                        </div>
-                        <p class="text-xs text-slate-400">
-                            <i class="fas fa-clock mr-1"></i> ${date}
-                        </p>
-                        <div class="flex gap-4 mt-2 text-xs">
-                            <span class="text-slate-500">
-                                <i class="fas fa-user text-blue-400 mr-1"></i> ${sale.pic}
-                            </span>
-                            <span class="text-slate-500">
-                                <i class="fas fa-boxes text-purple-400 mr-1"></i> ${totalItems} Unit
-                            </span>
-                            <span class="text-slate-500">
-                                <i class="fas fa-money-bill-wave text-emerald-400 mr-1"></i> Rp ${(sale.amount || 0).toLocaleString()}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="event.stopPropagation(); takeElementScreenshot('sales-detail-${idx}', 'Transaksi_${idx}')" 
-                                class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 rounded px-3 py-2 transition text-xs">
-                            <i class="fas fa-camera"></i>
-                        </button>
-                        <i id="sales-icon-${idx}" class="fas fa-chevron-down text-slate-500 transition-transform"></i>
-                    </div>
-                </div>
-                
-                <!-- Detail (Collapsible) -->
-                <div id="sales-detail-${idx}" class="hidden">
-                    <div class="p-4 pt-0 border-t border-slate-700">
-                        <div class="mb-3">
-                            <h5 class="text-xs font-bold text-slate-400 uppercase mb-2">
-                                <i class="fas fa-list mr-1"></i> Detail Pembelian
-                            </h5>
-                            <div class="border border-slate-700 rounded overflow-hidden bg-slate-900/30">
-                                <table class="w-full text-left">
-                                    <thead class="bg-slate-800 text-[10px] text-slate-500 uppercase">
-                                        <tr>
-                                            <th class="p-2">Produk</th>
-                                            <th class="p-2 text-center">Qty</th>
-                                            <th class="p-2 text-center">Stok (Before→After)</th>
-                                            <th class="p-2 text-right">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${itemsHtml}
-                                    </tbody>
-                                </table>
+                <div class="bg-slate-800/50 border border-slate-700 rounded-xl mb-4 overflow-hidden hover:border-emerald-500/50 transition">
+                    <!-- Header - Always Visible -->
+                    <div class="p-4 bg-gradient-to-r from-slate-800 to-slate-800/50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h4 class="text-lg font-bold text-white">
+                                        #${String(salesHistory.length - idx).padStart(3, '0')}
+                                    </h4>
+                                    <span class="px-3 py-1 bg-emerald-600/20 text-emerald-300 rounded-full text-xs font-bold border border-emerald-500/30">
+                                        ${sale.groupName || 'N/A'}
+                                    </span>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3 text-xs">
+                                    <div class="flex items-center text-slate-400">
+                                        <i class="fas fa-calendar-alt mr-2 text-blue-400"></i>
+                                        <span>${date}</span>
+                                    </div>
+                                    <div class="flex items-center text-slate-400">
+                                        <i class="fas fa-user mr-2 text-purple-400"></i>
+                                        <span>${sale.pic || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-right">
+                                <p class="text-xs text-slate-500 uppercase mb-1">Total</p>
+                                <p class="text-2xl font-bold text-emerald-400">
+                                    Rp ${((sale.amount || 0) / 1000).toFixed(0)}K
+                                </p>
+                                <p class="text-xs text-slate-500 mt-1">${totalItems} Item</p>
                             </div>
                         </div>
                         
-                        <div class="flex justify-between items-center bg-emerald-900/20 border border-emerald-700/50 rounded p-3">
-                            <span class="text-slate-400 font-bold text-sm uppercase">Total Pembayaran</span>
-                            <span class="text-xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                        <!-- Action Buttons -->
+                        <div class="flex gap-2 pt-3 border-t border-slate-700/50">
+                            <button onclick="toggleSalesDetail(${idx})" 
+                                class="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                                <i id="sales-icon-${idx}" class="fas fa-chevron-down transition-transform"></i>
+                                <span>Lihat Detail</span>
+                            </button>
+                            <button onclick="screenshotSalesTransaction('${sale.id}', ${idx})" 
+                                class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-2"
+                                title="Screenshot Transaksi">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button onclick="deleteSalesTransaction('${sale.id}', ${idx})" 
+                                class="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-2"
+                                title="Hapus Transaksi">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Detail Section - Collapsible -->
+                    <div id="sales-detail-${idx}" class="hidden">
+                        <div class="p-4 bg-slate-900/50">
+                            <!-- Items List -->
+                            <div class="mb-4">
+                                <h5 class="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center">
+                                    <i class="fas fa-shopping-cart mr-2"></i>
+                                    Produk yang Dibeli
+                                </h5>
+                                <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                                    ${itemsList}
+                                </div>
+                            </div>
+                            
+                            <!-- Limit Usage -->
+                            ${limitBadges ? `
+                            <div class="mb-4">
+                                <h5 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center">
+                                    <i class="fas fa-chart-bar mr-2"></i>
+                                    Pemakaian Limit Kelompok
+                                </h5>
+                                <div class="flex flex-wrap gap-2">
+                                    ${limitBadges}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Summary -->
+                            <div class="bg-gradient-to-r from-emerald-900/20 to-emerald-800/10 border border-emerald-700/50 rounded-lg p-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-bold text-slate-300 uppercase">Total Pembayaran</span>
+                                    <span class="text-2xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            `;
+        }).join('');
+        
+        console.log('✅ Sales history rendered successfully');
+        
+    } catch(err) {
+        console.error('❌ Error rendering sales history:', err);
+        container.innerHTML = `<div class="text-center text-rose-500 py-10">Error: ${err.message}</div>`;
+    }
+};
+// Update count badge
+const badge = document.getElementById('sales-count-badge');
+if(badge) {
+    badge.textContent = salesHistory.length;
+}
+window.toggleSalesDetail = (idx) => {
+    const detail = document.getElementById(`sales-detail-${idx}`);
+    const icon = document.getElementById(`sales-icon-${idx}`);
+    
+    if(!detail || !icon) return;
+    
+    const isHidden = detail.classList.contains('hidden');
+    
+    if(isHidden) {
+        detail.classList.remove('hidden');
+        detail.style.animation = 'slideDown 0.3s ease-out';
+        icon.style.transform = 'rotate(180deg)';
+        icon.closest('button').querySelector('span').textContent = 'Tutup Detail';
+    } else {
+        detail.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            detail.classList.add('hidden');
+        }, 250);
+        icon.style.transform = 'rotate(0deg)';
+        icon.closest('button').querySelector('span').textContent = 'Lihat Detail';
+    }
+};
+
+window.screenshotSalesTransaction = async (saleId, idx) => {
+    const sale = salesHistory.find(s => s.id === saleId);
+    if(!sale) return showAlert("Error", "Data transaksi tidak ditemukan.", "error");
+    
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    
+    try {
+        // Create export container
+        const exportDiv = document.createElement('div');
+        exportDiv.style.cssText = 'position:absolute;top:-9999px;left:-9999px;width:600px;background:#1e293b;color:#fff;padding:30px;border-radius:12px;font-family:Inter,sans-serif;';
+        
+        const date = sale.timestamp ? 
+            new Date(sale.timestamp.seconds*1000).toLocaleString('id-ID', { 
+                dateStyle: 'full', 
+                timeStyle: 'short' 
+            }) : '-';
+        
+        const totalItems = sale.itemsDetail ? sale.itemsDetail.reduce((sum, item) => sum + item.qty, 0) : 0;
+        
+        const itemsRows = sale.itemsDetail ? sale.itemsDetail.map(item => `
+            <tr class="border-b border-slate-600/50">
+                <td class="py-2 px-3">
+                    <div class="font-bold text-slate-200">${item.name}</div>
+                    <div class="text-xs text-slate-500">${item.weaponClass || 'Umum'}</div>
+                </td>
+                <td class="py-2 px-3 text-center font-mono text-slate-300">${item.qty}</td>
+                <td class="py-2 px-3 text-center text-xs text-slate-400">${item.stockBefore} → ${item.stockAfter}</td>
+                <td class="py-2 px-3 text-right font-mono text-emerald-400">Rp ${(item.subtotal || 0).toLocaleString()}</td>
+            </tr>
+        `).join('') : '';
+        
+        exportDiv.innerHTML = `
+            <div class="mb-6 border-b-2 border-emerald-500 pb-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white tracking-tight">BUKTI TRANSAKSI</h2>
+                        <p class="text-sm text-emerald-400 font-medium mt-1">Vikrama ERP - Gun Store</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400 uppercase font-bold">No. Transaksi</div>
+                        <div class="text-lg font-mono text-white">#${String(salesHistory.length - idx).padStart(3, '0')}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Tanggal & Waktu</p>
+                    <p class="font-bold text-white">${date}</p>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Kelompok Pembeli</p>
+                    <p class="font-bold text-white">${sale.groupName || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Seller (PIC)</p>
+                    <p class="font-bold text-white">${sale.pic || '-'}</p>
+                </div>
+                <div>
+                    <p class="text-slate-500 text-xs uppercase mb-1">Total Item</p>
+                    <p class="font-bold text-white">${totalItems} Unit</p>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h4 class="text-sm font-bold text-slate-400 uppercase mb-3">Detail Pembelian</h4>
+                <div class="border border-slate-700 rounded-lg overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800 text-xs text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-2 text-left">Produk</th>
+                                <th class="p-2 text-center">Qty</th>
+                                <th class="p-2 text-center">Stok</th>
+                                <th class="p-2 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsRows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-4 mb-6">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 font-bold uppercase text-sm">Total Pembayaran</span>
+                    <span class="text-3xl font-bold text-emerald-400">Rp ${(sale.amount || 0).toLocaleString()}</span>
+                </div>
+            </div>
+            
+            <div class="border-t border-slate-800 pt-4 flex justify-between items-end text-[10px] text-slate-600">
+                <span>Generated by Vikrama ERP</span>
+                <span>*** DOKUMEN SAH ***</span>
             </div>
         `;
-    }).join('');
+        
+        document.body.appendChild(exportDiv);
+        
+        const canvas = await html2canvas(exportDiv, {
+            backgroundColor: '#0f172a',
+            scale: 2,
+            logging: false
+        });
+        
+        document.body.removeChild(exportDiv);
+        
+        const link = document.createElement('a');
+        link.download = `Transaksi_${String(salesHistory.length - idx).padStart(3, '0')}_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        showToast("Screenshot berhasil disimpan!", "success");
+        
+    } catch(err) {
+        console.error(err);
+        showAlert("Error", "Gagal membuat screenshot: " + err.message, "error");
+    } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    }
+};
+
+window.deleteSalesTransaction = (saleId, idx) => {
+    const sale = salesHistory.find(s => s.id === saleId);
+    if(!sale) return;
+    
+    const transNo = String(salesHistory.length - idx).padStart(3, '0');
+    
+    showConfirm(
+        "Hapus Transaksi?",
+        `Apakah Anda yakin ingin menghapus transaksi <b>#${transNo}</b>?<br><br>` +
+        `<div class="text-left bg-slate-800 p-3 rounded mt-3">` +
+        `<p class="text-sm text-slate-300">Kelompok: <b>${sale.groupName}</b></p>` +
+        `<p class="text-sm text-slate-300">Total: <b>Rp ${(sale.amount || 0).toLocaleString()}</b></p>` +
+        `</div><br>` +
+        `<span class="text-rose-500 font-bold">⚠️ PERINGATAN:</span><br>` +
+        `<ul class="list-disc list-inside text-left mt-2 text-sm">` +
+        `<li>Riwayat transaksi akan dihapus permanen</li>` +
+        `<li>Stok produk TIDAK akan dikembalikan</li>` +
+        `<li>Limit kelompok TIDAK akan dikembalikan</li>` +
+        `</ul>`,
+        async () => {
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', saleId));
+                showAlert("Berhasil", `Transaksi #${transNo} berhasil dihapus.`, "success");
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal menghapus transaksi: " + err.message, "error");
+            }
+        },
+        "danger"
+    );
+};
+
+window.deleteAllSalesHistory = () => {
+    if(salesHistory.length === 0) {
+        return showAlert("Info", "Tidak ada riwayat transaksi untuk dihapus.", "info");
+    }
+    
+    showConfirm(
+        "Hapus Semua Riwayat?",
+        `Apakah Anda yakin ingin menghapus <b>SEMUA ${salesHistory.length} transaksi</b> penjualan?<br><br>` +
+        `<span class="text-rose-500 font-bold text-lg">⚠️ PERINGATAN PENTING!</span><br><br>` +
+        `<ul class="list-disc list-inside text-left mt-2 text-sm space-y-1">` +
+        `<li>Semua riwayat transaksi akan dihapus permanen</li>` +
+        `<li>Stok produk TIDAK akan dikembalikan</li>` +
+        `<li>Limit kelompok TIDAK akan dikembalikan</li>` +
+        `<li><b>Aksi ini TIDAK dapat dibatalkan!</b></li>` +
+        `</ul>`,
+        async () => {
+            const btn = event.target;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menghapus...';
+            btn.disabled = true;
+            
+            try {
+                const batch = writeBatch(db);
+                let count = 0;
+                
+                salesHistory.forEach(sale => {
+                    batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'global_history', sale.id));
+                    count++;
+                });
+                
+                await batch.commit();
+                
+                showAlert("Berhasil", `Berhasil menghapus ${count} riwayat transaksi penjualan.`, "success");
+                
+            } catch(err) {
+                console.error(err);
+                showAlert("Error", "Gagal menghapus riwayat: " + err.message, "error");
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        },
+        "danger"
+    );
+};
+
+window.toggleSalesDetail = (idx) => {
+    const detail = document.getElementById(`sales-detail-${idx}`);
+    const icon = document.getElementById(`sales-icon-${idx}`);
+    
+    if(!detail || !icon) return;
+    
+    const isHidden = detail.classList.contains('hidden');
+    
+    if(isHidden) {
+        // Expand
+        detail.classList.remove('hidden');
+        detail.style.animation = 'slideDown 0.3s ease-out';
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        // Collapse
+        detail.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            detail.classList.add('hidden');
+        }, 250);
+        icon.style.transform = 'rotate(0deg)';
+    }
 };
 
 window.toggleSalesDetail = (idx) => {
@@ -4883,10 +5038,6 @@ window.toggleSalesDetail = (idx) => {
                         <p class="text-slate-400">Penjualan produk jadi kepada pelanggan.</p>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="openSalesReportModal()"
-                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
-                            <i class="fas fa-file-invoice mr-2"></i> Lihat Transaksi Terakhir
-                        </button>
                         <button onclick="openGroupManager()"
                             class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
                             <i class="fas fa-users mr-2"></i> Kelola Kelompok
@@ -4969,18 +5120,26 @@ window.toggleSalesDetail = (idx) => {
                     </div>
                 </div>
                 <!-- NEW: SALES HISTORY SECTION -->
+                <!-- SALES HISTORY SECTION - COLLAPSIBLE LIST -->
                 <div class="mt-8 glass-panel rounded-xl p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold text-white flex items-center">
                             <i class="fas fa-history mr-2 text-blue-400"></i>Riwayat Transaksi Penjualan
+                            <span id="sales-count-badge" class="ml-3 px-2 py-1 bg-blue-600/20 text-blue-300 rounded-full text-xs font-bold">0</span>
                         </h3>
-                        <button onclick="renderSalesHistory()"
-    class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition flex items-center">
-    <i class="fas fa-sync-alt mr-2"></i> Refresh
-</button>
+                        <div class="flex gap-2">
+                            <button onclick="deleteAllSalesHistory()"
+                                class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-2 rounded-lg border border-rose-600/30 transition flex items-center font-bold">
+                                <i class="fas fa-trash-alt mr-2"></i> Hapus Semua
+                            </button>
+                            <button onclick="renderSalesHistory()"
+                                class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg transition flex items-center font-bold">
+                                <i class="fas fa-sync-alt mr-2"></i> Refresh
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="sales-history-container" class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <div id="sales-history-container">
                         <div class="text-center text-slate-500 py-10 italic">Memuat riwayat...</div>
                     </div>
                 </div>
@@ -5982,31 +6141,6 @@ window.toggleSalesDetail = (idx) => {
             </form>
         </div>
     </div>
-    <!-- SALES REPORT MODAL -->
-    <div id="salesReportModal"
-        class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div
-            class="bg-slate-900 border border-blue-500/50 rounded-xl shadow-2xl w-full max-w-3xl transform transition-all scale-100 modal-scale flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center p-4 border-b border-slate-800">
-                <h3 class="text-lg font-bold text-white flex items-center">
-                    <i class="fas fa-file-invoice-dollar mr-2 text-blue-400"></i> Laporan Transaksi Penjualan
-                </h3>
-                <div class="flex gap-2">
-                    <button id="btnDownloadSalesReport" onclick="downloadSalesReport()"
-                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow flex items-center transition">
-                        <i class="fas fa-download mr-2"></i> Download
-                    </button>
-                    <button onclick="closeSalesReportModal()" class="text-slate-400 hover:text-white transition">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div id="salesReportContent" class="flex-1 overflow-y-auto custom-scrollbar bg-slate-800/50">
-                <!-- Content injected by JS -->
-            </div>
-        </div>
-    </div>
     <!-- CRAFTING MATERIAL USAGE REPORT MODAL -->
     <div id="craftingReportModal"
         class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -6043,3 +6177,4 @@ window.toggleSalesDetail = (idx) => {
 </body>
 
 </html>
+
